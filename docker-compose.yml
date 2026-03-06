@@ -6,10 +6,10 @@ x-airflow-common:
   environment:
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
-    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-}
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
-    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'  # local dev only — disable in any shared/cloud env
     ODDS_API_KEY: ${ODDS_API_KEY}
     DATA_DB_USER: ${DATA_DB_USER:-odds}
     DATA_DB_PASSWORD: ${DATA_DB_PASSWORD:-odds_password}
@@ -65,7 +65,7 @@ services:
     command:
       - -c
       - |
-        airflow db init &&
+        airflow db migrate &&
         airflow users create \
           --username admin \
           --password admin \
@@ -97,7 +97,7 @@ services:
         condition: service_completed_successfully
 
   pgadmin:
-    image: dpage/pgadmin4:latest
+    image: dpage/pgadmin4:8.5
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@admin.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
