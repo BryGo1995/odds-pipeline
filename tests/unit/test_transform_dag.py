@@ -16,6 +16,7 @@ def test_transform_dag_has_expected_tasks():
     from airflow.models import DagBag
     dag = DagBag(dag_folder="dags/", include_examples=False).dags["nba_transform"]
     task_ids = [t.task_id for t in dag.tasks]
+    assert "wait_for_ingest"        in task_ids
     assert "transform_events"       in task_ids
     assert "transform_odds"         in task_ids
     assert "transform_scores"       in task_ids

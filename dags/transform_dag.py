@@ -26,7 +26,9 @@ def _get_latest_raw(conn, endpoint):
             (endpoint,),
         )
         row = cur.fetchone()
-    return row[0] if row else []
+    if row is None:
+        raise ValueError(f"No successful raw data found for endpoint: '{endpoint}'. Run nba_ingest first.")
+    return row[0]
 
 
 def run_transform_events():
