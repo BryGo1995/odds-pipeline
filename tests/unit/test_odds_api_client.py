@@ -57,3 +57,16 @@ def test_fetch_raises_on_http_error():
         mock_get.return_value = mock_response
         with pytest.raises(requests.HTTPError):
             fetch_events(api_key="bad_key", sport="basketball_nba")
+
+
+def test_fetch_events_forwards_extra_params():
+    from plugins.odds_api_client import fetch_events
+    with patch("plugins.odds_api_client.requests.get") as mock_get:
+        mock_get.return_value = make_mock_response([])
+        fetch_events(
+            api_key="test_key",
+            sport="basketball_nba",
+            commenceTimeFrom="2024-01-01T00:00:00Z",
+        )
+        params = mock_get.call_args[1]["params"]
+        assert params["commenceTimeFrom"] == "2024-01-01T00:00:00Z"

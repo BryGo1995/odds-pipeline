@@ -10,7 +10,7 @@ from airflow.operators.python import PythonOperator
 
 sys.path.insert(0, "/opt/airflow")
 
-from config.settings import SPORT, REGIONS, MARKETS, BOOKMAKERS, ODDS_FORMAT
+from config.settings import SPORT, REGIONS, MARKETS, BOOKMAKERS
 from plugins.db_client import get_data_db_conn, store_raw_response
 from plugins.odds_api_client import fetch_events, fetch_odds, fetch_scores
 from plugins.transformers.events import transform_events
@@ -28,16 +28,16 @@ def run_backfill(**context):
     date_from = params.get("date_from")
     date_to = params.get("date_to")
 
-    event_params = {"sport": SPORT}
+    extra_event_params = {}
     if date_from:
-        event_params["commenceTimeFrom"] = f"{date_from}T00:00:00Z"
+        extra_event_params["commenceTimeFrom"] = f"{date_from}T00:00:00Z"
     if date_to:
-        event_params["commenceTimeTo"] = f"{date_to}T23:59:59Z"
+        extra_event_params["commenceTimeTo"] = f"{date_to}T23:59:59Z"
 
     conn = get_data_db_conn()
     try:
-        events = fetch_events(api_key=api_key, sport=SPORT)
-        store_raw_response(conn, "events", event_params, events)
+        events = fetch_events(api_key=api_key, sport=SPORT, **extra_event_params)
+        store_raw_response(conn, "events", {"sport": SPORT, **extra_event_params}, events)
         transform_events(conn, events)
         time.sleep(BACKFILL_SLEEP_SECONDS)
 
