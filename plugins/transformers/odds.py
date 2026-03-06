@@ -1,4 +1,13 @@
 # plugins/transformers/odds.py
+"""
+Transforms raw odds data into the normalized `odds` table.
+
+Note: This transformer uses plain INSERT (no ON CONFLICT) because the odds table
+is an append-only historical log — each fetch represents a point-in-time snapshot
+of lines, enabling line movement tracking. The transform DAG is designed to run
+once per ingest cycle; running it multiple times against the same raw data will
+create duplicate rows.
+"""
 
 def transform_odds(conn, raw_odds):
     if not raw_odds:

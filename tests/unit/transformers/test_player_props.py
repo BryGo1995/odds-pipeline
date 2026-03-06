@@ -52,3 +52,10 @@ def test_transform_player_props_skips_non_prop_markets():
     ]}]}]
     transform_player_props(conn=mock_conn, raw_odds=raw)
     mock_cursor.execute.assert_not_called()
+
+
+def test_transform_player_props_skips_empty_list():
+    from plugins.transformers.player_props import transform_player_props
+    mock_conn, mock_cursor = _make_mock_conn()
+    transform_player_props(conn=mock_conn, raw_odds=[])
+    mock_cursor.execute.assert_not_called()

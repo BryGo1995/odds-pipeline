@@ -1,4 +1,11 @@
 # plugins/transformers/player_props.py
+"""
+Transforms raw odds data into the normalized `player_props` table.
+
+Note: This transformer uses plain INSERT (no ON CONFLICT) because player_props
+is an append-only historical log for tracking line movement over time. The
+transform DAG should run once per ingest cycle to avoid duplicate rows.
+"""
 
 def transform_player_props(conn, raw_odds):
     if not raw_odds:

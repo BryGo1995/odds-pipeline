@@ -44,3 +44,10 @@ def test_transform_scores_handles_null_scores():
     args = mock_cursor.execute.call_args[0][1]
     assert args[1] is None  # home_score
     assert args[2] is None  # away_score
+
+
+def test_transform_scores_skips_empty_list():
+    from plugins.transformers.scores import transform_scores
+    mock_conn, mock_cursor = _make_mock_conn()
+    transform_scores(conn=mock_conn, raw_scores=[])
+    mock_cursor.execute.assert_not_called()
