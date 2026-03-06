@@ -1,0 +1,34 @@
+# plugins/odds_api_client.py
+import requests
+
+BASE_URL = "https://api.the-odds-api.com/v4"
+
+
+def fetch_events(api_key, sport):
+    url = f"{BASE_URL}/sports/{sport}/events"
+    response = requests.get(url, params={"apiKey": api_key})
+    response.raise_for_status()
+    return response.json()
+
+
+def fetch_odds(api_key, sport, regions, markets, bookmakers, odds_format="american"):
+    url = f"{BASE_URL}/sports/{sport}/odds"
+    response = requests.get(url, params={
+        "apiKey": api_key,
+        "regions": ",".join(regions),
+        "markets": ",".join(markets),
+        "bookmakers": ",".join(bookmakers),
+        "oddsFormat": odds_format,
+    })
+    response.raise_for_status()
+    return response.json()
+
+
+def fetch_scores(api_key, sport, days_from=3):
+    url = f"{BASE_URL}/sports/{sport}/scores"
+    response = requests.get(url, params={
+        "apiKey": api_key,
+        "daysFrom": days_from,
+    })
+    response.raise_for_status()
+    return response.json()
