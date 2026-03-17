@@ -106,6 +106,36 @@ services:
     depends_on:
       - data-postgres
 
+  postgres_exporter_data:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    hostname: odds-pipeline-postgres-data
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${DATA_DB_USER:-odds}:${DATA_DB_PASSWORD:-odds_password}@data-postgres:5432/${DATA_DB_NAME:-odds_db}?sslmode=disable"
+    restart: unless-stopped
+    networks:
+      - default
+      - monitoring
+    depends_on:
+      data-postgres:
+        condition: service_healthy
+
+  postgres_exporter_airflow:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    hostname: odds-pipeline-postgres-airflow
+    environment:
+      DATA_SOURCE_NAME: "postgresql://airflow:airflow@airflow-postgres:5432/airflow?sslmode=disable"
+    restart: unless-stopped
+    networks:
+      - default
+      - monitoring
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+
 volumes:
   airflow-postgres-data:
   data-postgres-data:
+
+networks:
+  monitoring:
+    external: true
