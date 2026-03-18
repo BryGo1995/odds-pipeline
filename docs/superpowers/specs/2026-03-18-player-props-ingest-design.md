@@ -59,12 +59,21 @@ Since player props will no longer be present in the `"odds"` raw response:
 
 ## Error Handling
 
-Follows the existing pipeline pattern: exceptions bubble up, Airflow retries per `default_args`, and the raw response is stored with `status="error"` in `raw_api_responses`.
+Follows the ingest pipeline pattern: exceptions bubble up, Airflow retries per `default_args` (`retries=3, retry_delay=5min, retry_exponential_backoff=True`), and the raw response is stored with `status="error"` in `raw_api_responses`.
+
+## Slack Notifications
+
+`nba_player_props` wires up `on_success_callback=notify_success` and `on_failure_callback=notify_failure`, matching `nba_ingest`. A failing props fetch should produce a Slack alert.
+
+## DAG Task Detail
+
+The endpoint name `"player_props"` is set by the DAG task when calling `_fetch_and_store` (or equivalent), not by `fetch_player_props()` itself. The function receives `PLAYER_PROP_MARKETS` as a list and delegates to `fetch_odds()`, which joins it into a comma-separated string for the API request.
 
 ## Testing
 
-- Add unit test for `fetch_player_props` in `tests/unit/test_odds_api_client.py` — verifies correct endpoint and market params are sent
-- Existing `tests/unit/transformers/test_player_props.py` and `tests/integration/test_transform_to_normalized.py` require no changes (transformer logic is unchanged)
+- Add unit test for `fetch_player_props` in `tests/unit/test_odds_api_client.py` — verifies correct endpoint and market params are sent. Also update the existing stale fixture in that file that still references `"player_props"` as a market name — replace with `"player_points"`.
+- Update `tests/unit/test_transform_dag.py` — remove the assertion that `"transform_player_props"` is in the `nba_transform` task IDs, since that task is being removed.
+- Existing `tests/unit/transformers/test_player_props.py` and `tests/integration/test_transform_to_normalized.py` require no changes (transformer logic is unchanged).
 
 ## Files Changed
 
@@ -74,4 +83,5 @@ Follows the existing pipeline pattern: exceptions bubble up, Airflow retries per
 | `plugins/odds_api_client.py` | Add `fetch_player_props()` |
 | `dags/player_props_dag.py` | New DAG |
 | `dags/transform_dag.py` | Remove player props processing and no-op task |
-| `tests/unit/test_odds_api_client.py` | Add unit test for `fetch_player_props` |
+| `tests/unit/test_odds_api_client.py` | Add `fetch_player_props` test, update stale fixture |
+| `tests/unit/test_transform_dag.py` | Remove `transform_player_props` task assertion |
