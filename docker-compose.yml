@@ -11,6 +11,7 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'  # local dev only — disable in any shared/cloud env
     ODDS_API_KEY: ${ODDS_API_KEY}
+    SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL}
     DATA_DB_USER: ${DATA_DB_USER:-odds}
     DATA_DB_PASSWORD: ${DATA_DB_PASSWORD:-odds_password}
     DATA_DB_NAME: ${DATA_DB_NAME:-odds_db}
