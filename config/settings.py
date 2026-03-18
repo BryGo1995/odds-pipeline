@@ -13,6 +13,12 @@ MARKETS = [
     "totals",
 ]
 
+PLAYER_PROP_MARKETS = [
+    "player_points",
+    "player_rebounds",
+    "player_assists",
+]
+
 # Bookmakers to include.
 # Fewer bookmakers = fewer API requests consumed.
 BOOKMAKERS = [

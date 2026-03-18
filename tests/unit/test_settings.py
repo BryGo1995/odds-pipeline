@@ -6,9 +6,11 @@ def test_sport_is_nba():
 
 
 def test_markets_is_list_with_player_props():
-    from config.settings import MARKETS
-    assert isinstance(MARKETS, list)
-    assert "player_props" in MARKETS
+    from config.settings import PLAYER_PROP_MARKETS
+    assert isinstance(PLAYER_PROP_MARKETS, list)
+    assert "player_points" in PLAYER_PROP_MARKETS
+    assert "player_rebounds" in PLAYER_PROP_MARKETS
+    assert "player_assists" in PLAYER_PROP_MARKETS
 
 
 def test_bookmakers_is_nonempty_list():
