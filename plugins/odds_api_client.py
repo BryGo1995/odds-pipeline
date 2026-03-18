@@ -28,6 +28,10 @@ def fetch_odds(api_key, sport, regions, markets, bookmakers, odds_format="americ
     return response.json(), remaining
 
 
+def fetch_player_props(api_key, sport, regions, markets, bookmakers, odds_format="american"):
+    return fetch_odds(api_key, sport, regions, markets, bookmakers, odds_format)
+
+
 def fetch_scores(api_key, sport, days_from=3):
     url = f"{BASE_URL}/sports/{sport}/scores"
     response = requests.get(url, params={

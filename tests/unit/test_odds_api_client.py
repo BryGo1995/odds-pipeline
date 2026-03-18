@@ -30,11 +30,11 @@ def test_fetch_odds_sends_markets_and_bookmakers():
             api_key="test_key",
             sport="basketball_nba",
             regions=["us"],
-            markets=["h2h", "player_props"],
+            markets=["h2h", "player_points"],
             bookmakers=["draftkings"],
         )
         params = mock_get.call_args[1]["params"]
-        assert params["markets"] == "h2h,player_props"
+        assert params["markets"] == "h2h,player_points"
         assert params["bookmakers"] == "draftkings"
 
 
@@ -102,3 +102,34 @@ def test_fetch_events_forwards_extra_params():
         )
         params = mock_get.call_args[1]["params"]
         assert params["commenceTimeFrom"] == "2024-01-01T00:00:00Z"
+
+
+def test_fetch_player_props_sends_player_markets():
+    from plugins.odds_api_client import fetch_player_props
+    with patch("plugins.odds_api_client.requests.get") as mock_get:
+        mock_get.return_value = make_mock_response([])
+        fetch_player_props(
+            api_key="test_key",
+            sport="basketball_nba",
+            regions=["us"],
+            markets=["player_points", "player_rebounds", "player_assists"],
+            bookmakers=["draftkings"],
+        )
+        params = mock_get.call_args[1]["params"]
+        assert params["markets"] == "player_points,player_rebounds,player_assists"
+        assert "basketball_nba/odds" in mock_get.call_args[0][0]
+
+
+def test_fetch_player_props_returns_data_and_remaining():
+    from plugins.odds_api_client import fetch_player_props
+    with patch("plugins.odds_api_client.requests.get") as mock_get:
+        mock_get.return_value = make_mock_response([{"id": "game1"}], remaining=150)
+        data, remaining = fetch_player_props(
+            api_key="test_key",
+            sport="basketball_nba",
+            regions=["us"],
+            markets=["player_points"],
+            bookmakers=["draftkings"],
+        )
+        assert data == [{"id": "game1"}]
+        assert remaining == 150
