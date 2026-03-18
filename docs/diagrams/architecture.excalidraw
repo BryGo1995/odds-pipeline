@@ -13,14 +13,50 @@
       "y": 373,
       "width": 409.609375,
       "height": 632.5161743164062,
-      "label": {
-        "groupIds": [
-          "subgraph_group_DB"
-        ],
-        "text": "PostgreSQL",
-        "fontSize": 20,
-        "verticalAlign": "top"
-      }
+      "boundElements": [
+        {
+          "id": "lbl_DB",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_DB",
+      "type": "text",
+      "x": 702.015625,
+      "y": 383,
+      "width": 409.609375,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [
+        "subgraph_group_DB"
+      ],
+      "frameId": null,
+      "roundness": null,
+      "seed": 199982,
+      "version": 1,
+      "versionNonce": 299973,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773875262196,
+      "link": null,
+      "locked": false,
+      "text": "PostgreSQL",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "top",
+      "containerId": "DB",
+      "originalText": "PostgreSQL",
+      "rawText": "PostgreSQL",
+      "lineHeight": 1.25
     },
     {
       "id": "Airflow",
@@ -32,14 +68,50 @@
       "y": 178,
       "width": 674.015625,
       "height": 1052.5162353515625,
-      "label": {
-        "groupIds": [
-          "subgraph_group_Airflow"
-        ],
-        "text": "Apache Airflow",
-        "fontSize": 20,
-        "verticalAlign": "top"
-      }
+      "boundElements": [
+        {
+          "id": "lbl_Airflow",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_Airflow",
+      "type": "text",
+      "x": 8,
+      "y": 188,
+      "width": 674.015625,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [
+        "subgraph_group_Airflow"
+      ],
+      "frameId": null,
+      "roundness": null,
+      "seed": 399964,
+      "version": 1,
+      "versionNonce": 499955,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773875262196,
+      "link": null,
+      "locked": false,
+      "text": "Apache Airflow",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "top",
+      "containerId": "Airflow",
+      "originalText": "Apache Airflow",
+      "rawText": "Apache Airflow",
+      "lineHeight": 1.25
     },
     {
       "id": "OddsAPI",
@@ -50,12 +122,49 @@
       "width": 184.515625,
       "height": 60,
       "strokeWidth": 2,
-      "label": {
-        "groupIds": [],
-        "text": "The Odds API",
-        "fontSize": 20
-      },
-      "link": null
+      "link": null,
+      "boundElements": [
+        {
+          "id": "lbl_OddsAPI",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_OddsAPI",
+      "type": "text",
+      "x": 175.2265625,
+      "y": 25.5,
+      "width": 184.515625,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 599946,
+      "version": 1,
+      "versionNonce": 699937,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773875262196,
+      "link": null,
+      "locked": false,
+      "text": "The Odds API",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "OddsAPI",
+      "originalText": "The Odds API",
+      "rawText": "The Odds API",
+      "lineHeight": 1.25
     },
     {
       "id": "Ingest",
@@ -68,14 +177,51 @@
       "width": 208.96875,
       "height": 90,
       "strokeWidth": 2,
-      "label": {
-        "groupIds": [
-          "subgraph_group_Airflow"
-        ],
-        "text": "nba_ingest\\n8am & 8pm daily",
-        "fontSize": 20
-      },
-      "link": null
+      "link": null,
+      "boundElements": [
+        {
+          "id": "lbl_Ingest",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_Ingest",
+      "type": "text",
+      "x": 43,
+      "y": 223,
+      "width": 208.96875,
+      "height": 50,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [
+        "subgraph_group_Airflow"
+      ],
+      "frameId": null,
+      "roundness": null,
+      "seed": 799928,
+      "version": 1,
+      "versionNonce": 899919,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773875262196,
+      "link": null,
+      "locked": false,
+      "text": "nba_ingest\n8am & 8pm daily",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "Ingest",
+      "originalText": "nba_ingest\n8am & 8pm daily",
+      "rawText": "nba_ingest\n8am & 8pm daily",
+      "lineHeight": 1.25
     },
     {
       "id": "Transform",
@@ -88,14 +234,51 @@
       "width": 224.53125,
       "height": 90,
       "strokeWidth": 2,
-      "label": {
-        "groupIds": [
-          "subgraph_group_Airflow"
-        ],
-        "text": "nba_transform\\n15 min after ingest",
-        "fontSize": 20
-      },
-      "link": null
+      "link": null,
+      "boundElements": [
+        {
+          "id": "lbl_Transform",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_Transform",
+      "type": "text",
+      "x": 422.484375,
+      "y": 648.0897216796875,
+      "width": 224.53125,
+      "height": 50,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [
+        "subgraph_group_Airflow"
+      ],
+      "frameId": null,
+      "roundness": null,
+      "seed": 999910,
+      "version": 1,
+      "versionNonce": 1099901,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773875262196,
+      "link": null,
+      "locked": false,
+      "text": "nba_transform\n15 min after ingest",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "Transform",
+      "originalText": "nba_transform\n15 min after ingest",
+      "rawText": "nba_transform\n15 min after ingest",
+      "lineHeight": 1.25
     },
     {
       "id": "PlayerProps",
@@ -108,14 +291,51 @@
       "width": 220.125,
       "height": 90,
       "strokeWidth": 2,
-      "label": {
-        "groupIds": [
-          "subgraph_group_Airflow"
-        ],
-        "text": "nba_player_props\\n10pm daily",
-        "fontSize": 20
-      },
-      "link": null
+      "link": null,
+      "boundElements": [
+        {
+          "id": "lbl_PlayerProps",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_PlayerProps",
+      "type": "text",
+      "x": 277.421875,
+      "y": 1135.5162048339844,
+      "width": 220.125,
+      "height": 50,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [
+        "subgraph_group_Airflow"
+      ],
+      "frameId": null,
+      "roundness": null,
+      "seed": 1199892,
+      "version": 1,
+      "versionNonce": 1299883,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773875262196,
+      "link": null,
+      "locked": false,
+      "text": "nba_player_props\n10pm daily",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "PlayerProps",
+      "originalText": "nba_player_props\n10pm daily",
+      "rawText": "nba_player_props\n10pm daily",
+      "lineHeight": 1.25
     },
     {
       "id": "Raw",
@@ -128,14 +348,51 @@
       "width": 188.4375,
       "height": 120.0897216796875,
       "strokeWidth": 2,
-      "label": {
-        "groupIds": [
-          "subgraph_group_DB"
-        ],
-        "text": "Raw Layer\\nraw_api_responses",
-        "fontSize": 12
-      },
-      "link": null
+      "link": null,
+      "boundElements": [
+        {
+          "id": "lbl_Raw",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_Raw",
+      "type": "text",
+      "x": 848.07421875,
+      "y": 443.04485627589884,
+      "width": 188.4375,
+      "height": 30,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [
+        "subgraph_group_DB"
+      ],
+      "frameId": null,
+      "roundness": null,
+      "seed": 1399874,
+      "version": 1,
+      "versionNonce": 1499865,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773875262196,
+      "link": null,
+      "locked": false,
+      "text": "Raw Layer\nraw_api_responses",
+      "fontSize": 12,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "Raw",
+      "originalText": "Raw Layer\nraw_api_responses",
+      "rawText": "Raw Layer\nraw_api_responses",
+      "lineHeight": 1.25
     },
     {
       "id": "Normalized",
@@ -148,14 +405,51 @@
       "width": 215,
       "height": 152.42648315429688,
       "strokeWidth": 2,
-      "label": {
-        "groupIds": [
-          "subgraph_group_DB"
-        ],
-        "text": "Normalized Layer\\ngames · odds · scores · player_props",
-        "fontSize": 12
-      },
-      "link": null
+      "link": null,
+      "boundElements": [
+        {
+          "id": "lbl_Normalized",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_Normalized",
+      "type": "text",
+      "x": 737.015625,
+      "y": 889.3029695398667,
+      "width": 215,
+      "height": 30,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [
+        "subgraph_group_DB"
+      ],
+      "frameId": null,
+      "roundness": null,
+      "seed": 1599856,
+      "version": 1,
+      "versionNonce": 1699847,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773875262196,
+      "link": null,
+      "locked": false,
+      "text": "Normalized Layer\ngames · odds · scores · player_props",
+      "fontSize": 12,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "Normalized",
+      "originalText": "Normalized Layer\ngames · odds · scores · player_props",
+      "rawText": "Normalized Layer\ngames · odds · scores · player_props",
+      "lineHeight": 1.25
     },
     {
       "id": "Slack",
@@ -166,12 +460,49 @@
       "width": 108.90625,
       "height": 60,
       "strokeWidth": 2,
-      "label": {
-        "groupIds": [],
-        "text": "Slack",
-        "fontSize": 20
-      },
-      "link": null
+      "link": null,
+      "boundElements": [
+        {
+          "id": "lbl_Slack",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_Slack",
+      "type": "text",
+      "x": 213.03125,
+      "y": 1328.0162048339844,
+      "width": 108.90625,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 1799838,
+      "version": 1,
+      "versionNonce": 1899829,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773875262196,
+      "link": null,
+      "locked": false,
+      "text": "Slack",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "Slack",
+      "originalText": "Slack",
+      "rawText": "Slack",
+      "lineHeight": 1.25
     },
     {
       "id": "OddsAPI_Ingest",
@@ -198,11 +529,6 @@
           131
         ]
       ],
-      "label": {
-        "text": "Fetch events, odds, scores",
-        "fontSize": 20,
-        "groupIds": []
-      },
       "roundness": {
         "type": 2
       },
@@ -211,7 +537,49 @@
       },
       "end": {
         "id": "Ingest"
-      }
+      },
+      "boundElements": [
+        {
+          "id": "lbl_OddsAPI_Ingest",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_OddsAPI_Ingest",
+      "type": "text",
+      "x": 47.48400000000001,
+      "y": 163.5,
+      "width": 200,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 1999820,
+      "version": 1,
+      "versionNonce": 2099811,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773875262196,
+      "link": null,
+      "locked": false,
+      "text": "Fetch events, odds, scores",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "OddsAPI_Ingest",
+      "originalText": "Fetch events, odds, scores",
+      "rawText": "Fetch events, odds, scores",
+      "lineHeight": 1.25
     },
     {
       "id": "Ingest_Raw",
@@ -238,11 +606,6 @@
           166.63299999999998
         ]
       ],
-      "label": {
-        "text": "Store raw JSON",
-        "fontSize": 20,
-        "groupIds": []
-      },
       "roundness": {
         "type": 2
       },
@@ -251,7 +614,49 @@
       },
       "end": {
         "id": "Raw"
-      }
+      },
+      "boundElements": [
+        {
+          "id": "lbl_Ingest_Raw",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_Ingest_Raw",
+      "type": "text",
+      "x": 434.75,
+      "y": 358.5,
+      "width": 200,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 2199802,
+      "version": 1,
+      "versionNonce": 2299793,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773875262196,
+      "link": null,
+      "locked": false,
+      "text": "Store raw JSON",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "Ingest_Raw",
+      "originalText": "Store raw JSON",
+      "rawText": "Store raw JSON",
+      "lineHeight": 1.25
     },
     {
       "id": "Raw_Transform",
@@ -274,11 +679,6 @@
           119.92500000000007
         ]
       ],
-      "label": {
-        "text": "Read latest response",
-        "fontSize": 20,
-        "groupIds": []
-      },
       "roundness": {
         "type": 2
       },
@@ -287,7 +687,49 @@
       },
       "end": {
         "id": "Transform"
-      }
+      },
+      "boundElements": [
+        {
+          "id": "lbl_Raw_Transform",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_Raw_Transform",
+      "type": "text",
+      "x": 744.516,
+      "y": 558.59,
+      "width": 200,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 2399784,
+      "version": 1,
+      "versionNonce": 2499775,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773875262196,
+      "link": null,
+      "locked": false,
+      "text": "Read latest response",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "Raw_Transform",
+      "originalText": "Read latest response",
+      "rawText": "Read latest response",
+      "lineHeight": 1.25
     },
     {
       "id": "Transform_Normalized",
@@ -310,11 +752,6 @@
           139.11699999999996
         ]
       ],
-      "label": {
-        "text": "Write structured rows",
-        "fontSize": 20,
-        "groupIds": []
-      },
       "roundness": {
         "type": 2
       },
@@ -323,7 +760,49 @@
       },
       "end": {
         "id": "Normalized"
-      }
+      },
+      "boundElements": [
+        {
+          "id": "lbl_Transform_Normalized",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_Transform_Normalized",
+      "type": "text",
+      "x": 434.75,
+      "y": 758.59,
+      "width": 200,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 2599766,
+      "version": 1,
+      "versionNonce": 2699757,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773875262196,
+      "link": null,
+      "locked": false,
+      "text": "Write structured rows",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "Transform_Normalized",
+      "originalText": "Write structured rows",
+      "rawText": "Write structured rows",
+      "lineHeight": 1.25
     },
     {
       "id": "Normalized_PlayerProps",
@@ -350,11 +829,6 @@
           132.43899999999996
         ]
       ],
-      "label": {
-        "text": "Look up upcoming game IDs",
-        "fontSize": 20,
-        "groupIds": []
-      },
       "roundness": {
         "type": 2
       },
@@ -363,7 +837,49 @@
       },
       "end": {
         "id": "PlayerProps"
-      }
+      },
+      "boundElements": [
+        {
+          "id": "lbl_Normalized_PlayerProps",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_Normalized_PlayerProps",
+      "type": "text",
+      "x": 167.48400000000004,
+      "y": 1046.016,
+      "width": 200,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 2799748,
+      "version": 1,
+      "versionNonce": 2899739,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773875262196,
+      "link": null,
+      "locked": false,
+      "text": "Look up upcoming game IDs",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "Normalized_PlayerProps",
+      "originalText": "Look up upcoming game IDs",
+      "rawText": "Look up upcoming game IDs",
+      "lineHeight": 1.25
     },
     {
       "id": "OddsAPI_PlayerProps",
@@ -430,11 +946,6 @@
           1043.516
         ]
       ],
-      "label": {
-        "text": "Fetch player props per game",
-        "fontSize": 20,
-        "groupIds": []
-      },
       "roundness": {
         "type": 2
       },
@@ -443,7 +954,49 @@
       },
       "end": {
         "id": "PlayerProps"
-      }
+      },
+      "boundElements": [
+        {
+          "id": "lbl_OddsAPI_PlayerProps",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_OddsAPI_PlayerProps",
+      "type": "text",
+      "x": 287.484,
+      "y": 558.59,
+      "width": 200,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 2999730,
+      "version": 1,
+      "versionNonce": 3099721,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773875262196,
+      "link": null,
+      "locked": false,
+      "text": "Fetch player props per game",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "OddsAPI_PlayerProps",
+      "originalText": "Fetch player props per game",
+      "rawText": "Fetch player props per game",
+      "lineHeight": 1.25
     },
     {
       "id": "PlayerProps_DB",
@@ -466,11 +1019,6 @@
           -109.51700000000005
         ]
       ],
-      "label": {
-        "text": "Store raw + normalized props",
-        "fontSize": 20,
-        "groupIds": []
-      },
       "roundness": {
         "type": 2
       },
@@ -479,7 +1027,49 @@
       },
       "end": {
         "id": "DB"
-      }
+      },
+      "boundElements": [
+        {
+          "id": "lbl_PlayerProps_DB",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_PlayerProps_DB",
+      "type": "text",
+      "x": 434.75,
+      "y": 1046.016,
+      "width": 200,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 3199712,
+      "version": 1,
+      "versionNonce": 3299703,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773875262196,
+      "link": null,
+      "locked": false,
+      "text": "Store raw + normalized props",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "PlayerProps_DB",
+      "originalText": "Store raw + normalized props",
+      "rawText": "Store raw + normalized props",
+      "lineHeight": 1.25
     },
     {
       "id": "Ingest_Slack",
@@ -546,11 +1136,6 @@
           1015.501
         ]
       ],
-      "label": {
-        "text": "Success / failure alert",
-        "fontSize": 20,
-        "groupIds": []
-      },
       "roundness": {
         "type": 2
       },
@@ -559,7 +1144,49 @@
       },
       "end": {
         "id": "Slack"
-      }
+      },
+      "boundElements": [
+        {
+          "id": "lbl_Ingest_Slack",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_Ingest_Slack",
+      "type": "text",
+      "x": 47.48400000000001,
+      "y": 889.803,
+      "width": 200,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 3399694,
+      "version": 1,
+      "versionNonce": 3499685,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773875262196,
+      "link": null,
+      "locked": false,
+      "text": "Success / failure alert",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "Ingest_Slack",
+      "originalText": "Success / failure alert",
+      "rawText": "Success / failure alert",
+      "lineHeight": 1.25
     },
     {
       "id": "PlayerProps_Slack",
@@ -586,11 +1213,6 @@
           102.9849999999999
         ]
       ],
-      "label": {
-        "text": "Success / failure alert",
-        "fontSize": 20,
-        "groupIds": []
-      },
       "roundness": {
         "type": 2
       },
@@ -599,7 +1221,49 @@
       },
       "end": {
         "id": "Slack"
-      }
+      },
+      "boundElements": [
+        {
+          "id": "lbl_PlayerProps_Slack",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_PlayerProps_Slack",
+      "type": "text",
+      "x": 287.484,
+      "y": 1256.016,
+      "width": 200,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 3599676,
+      "version": 1,
+      "versionNonce": 3699667,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773875262196,
+      "link": null,
+      "locked": false,
+      "text": "Success / failure alert",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "PlayerProps_Slack",
+      "originalText": "Success / failure alert",
+      "rawText": "Success / failure alert",
+      "lineHeight": 1.25
     }
   ],
   "appState": {
