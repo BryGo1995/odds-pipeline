@@ -6,12 +6,11 @@ REGIONS = ["us"]
 
 # Markets to fetch from Odds-API.
 # Add or remove to control API quota usage.
-# Options: h2h, spreads, totals, player_props
+# Options: h2h, spreads, totals
 MARKETS = [
     "h2h",
     "spreads",
     "totals",
-    "player_props",
 ]
 
 # Bookmakers to include.
