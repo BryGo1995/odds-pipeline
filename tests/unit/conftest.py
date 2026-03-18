@@ -1,0 +1,26 @@
+# tests/unit/conftest.py
+"""
+Stub out airflow modules so that plugins can be imported without a full
+Airflow installation in the local/CI environment.  Tests that need real
+Airflow behaviour (e.g. DagBag) import it inside the test body and will
+fail gracefully when Airflow is not present.
+"""
+import sys
+from unittest.mock import MagicMock
+
+
+def _stub_airflow():
+    """Insert minimal stubs for airflow into sys.modules."""
+    if "airflow" in sys.modules:
+        return  # real Airflow is installed — leave it alone
+
+    airflow_stub = MagicMock()
+    airflow_models_stub = MagicMock()
+
+    sys.modules.setdefault("airflow", airflow_stub)
+    sys.modules.setdefault("airflow.models", airflow_models_stub)
+    sys.modules.setdefault("airflow.operators", MagicMock())
+    sys.modules.setdefault("airflow.operators.python", MagicMock())
+
+
+_stub_airflow()
