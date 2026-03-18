@@ -10,7 +10,8 @@ def fetch_events(api_key, sport, **extra_params):
     params.update(extra_params)
     response = requests.get(url, params=params)
     response.raise_for_status()
-    return response.json()
+    remaining = int(response.headers.get("x-requests-remaining", 0))
+    return response.json(), remaining
 
 
 def fetch_odds(api_key, sport, regions, markets, bookmakers, odds_format="american"):
@@ -23,7 +24,8 @@ def fetch_odds(api_key, sport, regions, markets, bookmakers, odds_format="americ
         "oddsFormat": odds_format,
     })
     response.raise_for_status()
-    return response.json()
+    remaining = int(response.headers.get("x-requests-remaining", 0))
+    return response.json(), remaining
 
 
 def fetch_scores(api_key, sport, days_from=3):
@@ -33,4 +35,5 @@ def fetch_scores(api_key, sport, days_from=3):
         "daysFrom": days_from,
     })
     response.raise_for_status()
-    return response.json()
+    remaining = int(response.headers.get("x-requests-remaining", 0))
+    return response.json(), remaining
