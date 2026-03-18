@@ -12,7 +12,6 @@ from plugins.db_client import get_data_db_conn
 from plugins.transformers.events import transform_events
 from plugins.transformers.odds import transform_odds
 from plugins.transformers.scores import transform_scores
-from plugins.transformers.player_props import transform_player_props
 
 
 def _get_latest_raw(conn, endpoint):
@@ -44,7 +43,6 @@ def run_transform_odds():
     try:
         raw = _get_latest_raw(conn, "odds")
         transform_odds(conn, raw)
-        transform_player_props(conn, raw)
     finally:
         conn.close()
 
@@ -55,12 +53,6 @@ def run_transform_scores():
         transform_scores(conn, _get_latest_raw(conn, "scores"))
     finally:
         conn.close()
-
-
-def run_transform_player_props():
-    # Player props are sourced from the odds response and already processed
-    # in run_transform_odds. This task exists for visibility in the Airflow UI.
-    pass
 
 
 default_args = {
@@ -87,10 +79,8 @@ with DAG(
         mode="reschedule",
     )
 
-    t_events = PythonOperator(task_id="transform_events",       python_callable=run_transform_events)
-    t_odds   = PythonOperator(task_id="transform_odds",         python_callable=run_transform_odds)
-    t_scores = PythonOperator(task_id="transform_scores",       python_callable=run_transform_scores)
-    t_props  = PythonOperator(task_id="transform_player_props", python_callable=run_transform_player_props)
+    t_events = PythonOperator(task_id="transform_events", python_callable=run_transform_events)
+    t_odds   = PythonOperator(task_id="transform_odds",   python_callable=run_transform_odds)
+    t_scores = PythonOperator(task_id="transform_scores", python_callable=run_transform_scores)
 
     wait_for_ingest >> [t_events, t_odds, t_scores]
-    t_odds >> t_props
