@@ -49,9 +49,10 @@ def transform_player_props_task(**context):
             cur.execute(
                 """
                 SELECT response FROM raw_api_responses
-                WHERE endpoint = 'player_props' AND status = 'success'
+                WHERE endpoint = %s AND status = 'success'
                 ORDER BY fetched_at DESC LIMIT 1
-                """
+                """,
+                ("player_props",),
             )
             row = cur.fetchone()
         if row is None:
