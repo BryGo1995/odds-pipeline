@@ -13,7 +13,7 @@ Three focused changes across two files, plus one new file:
 
 1. **`plugins/odds_api_client.py`** — each fetch function returns `(data, remaining_requests)` instead of just `data`, reading `x-requests-remaining` from the Odds API response headers.
 
-2. **`dags/ingest_dag.py`** — `_fetch_and_store` captures `remaining_requests` and pushes it to XCom via `context['ti'].xcom_push`. The DAG definition adds `on_success_callback=notify_success` and `on_failure_callback=notify_failure`.
+2. **`dags/ingest_dag.py`** — The wrapper task callables (`fetch_events_task`, `fetch_odds_task`, `fetch_scores_task`) are updated to accept `**context` (Airflow 2.x automatic context injection). They extract `ti = context['ti']` and pass it into `_fetch_and_store`, which calls `ti.xcom_push(key='api_remaining', value=remaining)`. The DAG definition adds `on_success_callback=notify_success` and `on_failure_callback=notify_failure`.
 
 3. **`plugins/slack_notifier.py`** (new) — shared module with two callback functions:
    - `notify_success(context)` — reads DAG run metadata and pulls `api_remaining` from XCom on the `fetch_odds` task, posts a brief Slack message
@@ -43,9 +43,10 @@ fetch_events_task()
 
 fetch_odds_task() / fetch_scores_task() — same pattern
 
-DAG completes successfully
+DAG completes successfully (all task instances in terminal success state)
   → on_success_callback fires with Airflow context
   → notify_success() reads xcom_pull('fetch_odds', key='api_remaining')
+    → if xcom_pull returns None: success message omits quota field rather than raising
   → POST to SLACK_WEBHOOK_URL
 
 Any task fails
@@ -61,18 +62,18 @@ The quota is pulled from `fetch_odds` specifically — it is the most expensive 
 - Both notifier functions are fire-and-forget. A failed Slack POST never affects DAG state or masks the real failure.
 - Both wrap the webhook POST in `try/except`, logging a warning on failure. No retries, no re-raise.
 - `notify_failure` degrades gracefully if XCom or context fields are missing — the message omits unavailable fields rather than raising.
-- A missing `SLACK_WEBHOOK_URL` env var raises a `ValueError` at import time with a descriptive message, so misconfiguration is caught on DAG load rather than silently at runtime.
+- A missing `SLACK_WEBHOOK_URL` env var logs a `WARNING` at import time. At call time, both notifier functions check for the value and skip the POST (logging another warning) if it is absent. This avoids breaking DAG parsing — Slack is a passive awareness feature and should never cause DAGs to fail to load.
 
 ## Testing
 
-**`tests/test_slack_notifier.py`**
+**`tests/unit/test_slack_notifier.py`**
 - Unit tests for `notify_success` and `notify_failure` using a mock Airflow context dict
 - `unittest.mock.patch` on `requests.post`
 - Verifies correct message format
 - Verifies XCom is read from the correct task (`fetch_odds`) and key (`api_remaining`)
 - Verifies a failed webhook POST logs a warning without raising
 
-**`tests/test_odds_api_client.py`**
+**`tests/unit/test_odds_api_client.py`**
 - Extends existing tests to verify the updated return signature `(data, remaining)`
 - Verifies `x-requests-remaining` is correctly parsed from response headers
 
@@ -85,8 +86,8 @@ No integration tests against a real Slack workspace. The mock is sufficient give
 | `plugins/odds_api_client.py` | Return `(data, remaining)` tuples from all fetch functions |
 | `plugins/slack_notifier.py` | New file — `notify_success` and `notify_failure` callbacks |
 | `dags/ingest_dag.py` | Capture quota in `_fetch_and_store`, push to XCom, add DAG callbacks |
-| `tests/test_slack_notifier.py` | New test file |
-| `tests/test_odds_api_client.py` | Extend to cover new return signature |
+| `tests/unit/test_slack_notifier.py` | New test file |
+| `tests/unit/test_odds_api_client.py` | Extend to cover new return signature |
 
 ## Environment Variables
 
