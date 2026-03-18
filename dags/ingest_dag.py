@@ -11,14 +11,16 @@ sys.path.insert(0, "/opt/airflow")
 from config.settings import SPORT, REGIONS, MARKETS, BOOKMAKERS, ODDS_FORMAT, SCORES_DAYS_FROM
 from plugins.odds_api_client import fetch_events, fetch_odds, fetch_scores
 from plugins.db_client import get_data_db_conn, store_raw_response
+from plugins.slack_notifier import notify_success, notify_failure
 
 
-def _fetch_and_store(endpoint_name, fetch_fn, fetch_kwargs):
+def _fetch_and_store(endpoint_name, fetch_fn, fetch_kwargs, ti):
     api_key = os.environ["ODDS_API_KEY"]
     conn = get_data_db_conn()
     try:
-        data = fetch_fn(api_key=api_key, **fetch_kwargs)
+        data, remaining = fetch_fn(api_key=api_key, **fetch_kwargs)
         store_raw_response(conn, endpoint=endpoint_name, params=fetch_kwargs, response=data, status="success")
+        ti.xcom_push(key="api_remaining", value=remaining)
     except Exception:
         store_raw_response(conn, endpoint=endpoint_name, params=fetch_kwargs, response=None, status="error")
         raise
@@ -26,22 +28,25 @@ def _fetch_and_store(endpoint_name, fetch_fn, fetch_kwargs):
         conn.close()
 
 
-def fetch_events_task():
-    _fetch_and_store("events", fetch_events, {"sport": SPORT})
+def fetch_events_task(**context):
+    ti = context["ti"]
+    _fetch_and_store("events", fetch_events, {"sport": SPORT}, ti)
 
 
-def fetch_odds_task():
+def fetch_odds_task(**context):
+    ti = context["ti"]
     _fetch_and_store("odds", fetch_odds, {
         "sport": SPORT,
         "regions": REGIONS,
         "markets": MARKETS,
         "bookmakers": BOOKMAKERS,
         "odds_format": ODDS_FORMAT,
-    })
+    }, ti)
 
 
-def fetch_scores_task():
-    _fetch_and_store("scores", fetch_scores, {"sport": SPORT, "days_from": SCORES_DAYS_FROM})
+def fetch_scores_task(**context):
+    ti = context["ti"]
+    _fetch_and_store("scores", fetch_scores, {"sport": SPORT, "days_from": SCORES_DAYS_FROM}, ti)
 
 
 default_args = {
@@ -59,6 +64,8 @@ with DAG(
     start_date=datetime(2024, 1, 1),
     catchup=False,
     tags=["nba", "ingest"],
+    on_success_callback=notify_success,
+    on_failure_callback=notify_failure,
 ) as dag:
     t_events = PythonOperator(task_id="fetch_events", python_callable=fetch_events_task)
     t_odds   = PythonOperator(task_id="fetch_odds",   python_callable=fetch_odds_task)
