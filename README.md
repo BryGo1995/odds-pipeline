@@ -83,6 +83,23 @@ BOOKMAKERS = ["draftkings", "fanduel", "betmgm"]        # fewer = less API quota
 
 No DAG changes needed — just edit the config file.
 
+## Slack Notifications
+
+DAG run results (success and failure) can be posted to a Slack channel via an [incoming webhook](https://api.slack.com/messaging/webhooks).
+
+### Setup
+
+1. Create an incoming webhook in Slack (**Apps → Incoming WebHooks → Add to Slack**) and select the target channel.
+2. Copy the webhook URL and add it to `.env`:
+
+```
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+```
+
+That's it — the `nba_ingest` DAG will automatically post a message on each successful or failed run.
+
+If `SLACK_WEBHOOK_URL` is not set, notifications are silently skipped.
+
 ## Running Tests
 
 **Unit tests** (no Docker required):
