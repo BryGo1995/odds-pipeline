@@ -82,6 +82,7 @@ with DAG(
         task_id="wait_for_ingest",
         external_dag_id="nba_ingest",
         external_task_id=None,  # wait for full DAG completion
+        execution_delta=timedelta(minutes=15),
         timeout=600,
         mode="reschedule",
     )
