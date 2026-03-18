@@ -1,55 +1,27 @@
 flowchart TD
-    OddsAPI["The Odds API\n(api.the-odds-api.com/v4)"]
+    OddsAPI["The Odds API"]
 
     subgraph Airflow["Apache Airflow"]
-        subgraph IngestDAG["nba_ingest DAG\n(8am & 8pm daily)"]
-            FetchEvents[fetch_events]
-            FetchOdds[fetch_odds]
-            FetchScores[fetch_scores]
-        end
-
-        subgraph TransformDAG["nba_transform DAG\n(8:15am & 8:15pm)"]
-            WaitIngest{wait_for_ingest}
-            TransformEvents[transform_events]
-            TransformOdds[transform_odds]
-            TransformScores[transform_scores]
-        end
-
-        subgraph PlayerPropsDAG["nba_player_props DAG\n(10pm daily)"]
-            FetchProps[fetch_player_props\nper-event loop]
-            TransformProps[transform_player_props]
-        end
+        Ingest["nba_ingest\n8am & 8pm daily"]
+        Transform["nba_transform\n15 min after ingest"]
+        PlayerProps["nba_player_props\n10pm daily"]
     end
 
-    subgraph Plugins["Plugins"]
-        OddsClient[odds_api_client]
-        DBClient[db_client]
-        Transformers[transformers/\nevents · odds · scores · player_props]
-        SlackNotifier[slack_notifier]
+    subgraph DB["PostgreSQL"]
+        Raw[("Raw Layer\nraw_api_responses")]
+        Normalized[("Normalized Layer\ngames · odds · scores · player_props")]
     end
 
-    subgraph PostgreSQL["PostgreSQL"]
-        RawTable[(raw_api_responses)]
-        GamesTable[(games)]
-        OddsTable[(odds)]
-        ScoresTable[(scores)]
-        PropsTable[(player_props)]
-    end
+    Slack["Slack"]
 
-    Slack[Slack]
+    OddsAPI -->|"Fetch events, odds, scores"| Ingest
+    Ingest -->|"Store raw JSON"| Raw
+    Raw -->|"Read latest response"| Transform
+    Transform -->|"Write structured rows"| Normalized
 
-    OddsAPI -->|events / odds / scores / props JSON| OddsClient
-    OddsClient --> FetchEvents & FetchOdds & FetchScores & FetchProps
-    FetchEvents & FetchOdds & FetchScores & FetchProps -->|store raw JSON| RawTable
-    RawTable -->|latest raw response| WaitIngest
-    WaitIngest --> TransformEvents & TransformOdds & TransformScores
-    TransformEvents --> GamesTable
-    TransformOdds --> OddsTable
-    TransformScores --> ScoresTable
-    GamesTable -->|game_ids for today| FetchProps
-    TransformProps --> PropsTable
-    FetchProps --> TransformProps
-    IngestDAG -->|on_success / on_failure| SlackNotifier
-    PlayerPropsDAG -->|on_success / on_failure| SlackNotifier
-    SlackNotifier --> Slack
-    DBClient --> RawTable & GamesTable & OddsTable & ScoresTable & PropsTable
+    Normalized -->|"Look up upcoming game IDs"| PlayerProps
+    OddsAPI -->|"Fetch player props per game"| PlayerProps
+    PlayerProps -->|"Store raw + normalized props"| DB
+
+    Ingest -->|"Success / failure alert"| Slack
+    PlayerProps -->|"Success / failure alert"| Slack
