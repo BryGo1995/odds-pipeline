@@ -1,4 +1,5 @@
 # dags/player_props_dag.py
+import logging
 import os
 import sys
 from datetime import datetime, timedelta
@@ -15,31 +16,52 @@ from plugins.slack_notifier import notify_success, notify_failure
 from plugins.transformers.player_props import transform_player_props
 
 
-# Intentional copy of _fetch_and_store from ingest_dag.py — DAG files are kept
-# self-contained to avoid cross-DAG imports, consistent with the existing pattern.
-def _fetch_and_store(endpoint_name, fetch_fn, fetch_kwargs, ti):
+def fetch_player_props_task(**context):
     api_key = os.environ["ODDS_API_KEY"]
     conn = get_data_db_conn()
     try:
-        data, remaining = fetch_fn(api_key=api_key, **fetch_kwargs)
-        store_raw_response(conn, endpoint=endpoint_name, params=fetch_kwargs, response=data, status="success")
-        ti.xcom_push(key="api_remaining", value=remaining)
-    except Exception:
-        store_raw_response(conn, endpoint=endpoint_name, params=fetch_kwargs, response=None, status="error")
-        raise
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT game_id FROM games WHERE commence_time >= CURRENT_DATE ORDER BY commence_time"
+            )
+            game_ids = [row[0] for row in cur.fetchall()]
+
+        if not game_ids:
+            raise ValueError("No today/upcoming games found in DB. Run nba_ingest first.")
+
+        all_props = []
+        remaining = 0
+        fetch_kwargs = {
+            "sport": SPORT,
+            "regions": REGIONS,
+            "markets": PLAYER_PROP_MARKETS,
+            "bookmakers": BOOKMAKERS,
+            "odds_format": ODDS_FORMAT,
+        }
+        for game_id in game_ids:
+            try:
+                data, remaining = fetch_player_props(
+                    api_key=api_key,
+                    event_id=game_id,
+                    **fetch_kwargs,
+                )
+                all_props.append(data)
+            except Exception as e:
+                logging.warning("Failed to fetch player props for event %s: %s", game_id, e)
+
+        store_raw_response(
+            conn,
+            endpoint="player_props",
+            params=fetch_kwargs,
+            response=all_props,
+            status="success" if all_props else "error",
+        )
+        context["ti"].xcom_push(key="api_remaining", value=remaining)
+
+        if not all_props:
+            raise ValueError("All player props fetches failed. Check API key and event IDs.")
     finally:
         conn.close()
-
-
-def fetch_player_props_task(**context):
-    ti = context["ti"]
-    _fetch_and_store("player_props", fetch_player_props, {
-        "sport": SPORT,
-        "regions": REGIONS,
-        "markets": PLAYER_PROP_MARKETS,
-        "bookmakers": BOOKMAKERS,
-        "odds_format": ODDS_FORMAT,
-    }, ti)
 
 
 def transform_player_props_task(**context):
