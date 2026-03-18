@@ -1,0 +1,1884 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://excalidraw.com",
+  "elements": [
+    {
+      "id": "PostgreSQL",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_PostgreSQL"
+      ],
+      "x": 1431.62109375,
+      "y": 588,
+      "width": 519.75,
+      "height": 1306.0784912109375,
+      "label": {
+        "groupIds": [
+          "subgraph_group_PostgreSQL"
+        ],
+        "text": "PostgreSQL",
+        "fontSize": 20,
+        "verticalAlign": "top"
+      }
+    },
+    {
+      "id": "Plugins",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_Plugins"
+      ],
+      "x": 1971.37109375,
+      "y": 238,
+      "width": 576.71875,
+      "height": 1497.7532958984375,
+      "label": {
+        "groupIds": [
+          "subgraph_group_Plugins"
+        ],
+        "text": "Plugins",
+        "fontSize": 20,
+        "verticalAlign": "top"
+      }
+    },
+    {
+      "id": "Airflow",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_Airflow"
+      ],
+      "x": 8,
+      "y": 373,
+      "width": 1403.62109375,
+      "height": 1362.7532958984375,
+      "label": {
+        "groupIds": [
+          "subgraph_group_Airflow"
+        ],
+        "text": "Apache Airflow",
+        "fontSize": 20,
+        "verticalAlign": "top"
+      }
+    },
+    {
+      "id": "PlayerPropsDAG",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_PlayerPropsDAG",
+        "subgraph_group_Airflow"
+      ],
+      "x": -2.181640625,
+      "y": 1340.753303527832,
+      "width": 486,
+      "height": 370,
+      "label": {
+        "groupIds": [
+          "subgraph_group_PlayerPropsDAG",
+          "subgraph_group_Airflow"
+        ],
+        "text": "nba_player_props DAG\\n(10pm daily)",
+        "fontSize": 20,
+        "verticalAlign": "top"
+      }
+    },
+    {
+      "id": "TransformDAG",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_TransformDAG",
+        "subgraph_group_Airflow"
+      ],
+      "x": 593.63671875,
+      "y": 783.089729309082,
+      "width": 797.984375,
+      "height": 354.53125,
+      "label": {
+        "groupIds": [
+          "subgraph_group_TransformDAG",
+          "subgraph_group_Airflow"
+        ],
+        "text": "nba_transform DAG\\n(8:15am & 8:15pm)",
+        "fontSize": 20,
+        "verticalAlign": "top"
+      }
+    },
+    {
+      "id": "IngestDAG",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_IngestDAG",
+        "subgraph_group_Airflow"
+      ],
+      "x": 392.78125,
+      "y": 398,
+      "width": 697.15234375,
+      "height": 110,
+      "label": {
+        "groupIds": [
+          "subgraph_group_IngestDAG",
+          "subgraph_group_Airflow"
+        ],
+        "text": "nba_ingest DAG\\n(8am & 8pm daily)",
+        "fontSize": 20,
+        "verticalAlign": "top"
+      }
+    },
+    {
+      "id": "OddsAPI",
+      "type": "rectangle",
+      "groupIds": [],
+      "x": 2071.40234375,
+      "y": 8,
+      "width": 260,
+      "height": 120,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [],
+        "text": "The Odds API\\n(api.the-odds-api.com/v4)",
+        "fontSize": 20
+      },
+      "link": null
+    },
+    {
+      "id": "FetchEvents",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_IngestDAG",
+        "subgraph_group_Airflow"
+      ],
+      "x": 432.21484375,
+      "y": 423,
+      "width": 173.421875,
+      "height": 60,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [
+          "subgraph_group_IngestDAG",
+          "subgraph_group_Airflow"
+        ],
+        "text": "fetch_events",
+        "fontSize": 20
+      },
+      "link": null
+    },
+    {
+      "id": "FetchOdds",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_IngestDAG",
+        "subgraph_group_Airflow"
+      ],
+      "x": 673.68359375,
+      "y": 423,
+      "width": 157.859375,
+      "height": 60,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [
+          "subgraph_group_IngestDAG",
+          "subgraph_group_Airflow"
+        ],
+        "text": "fetch_odds",
+        "fontSize": 20
+      },
+      "link": null
+    },
+    {
+      "id": "FetchScores",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_IngestDAG",
+        "subgraph_group_Airflow"
+      ],
+      "x": 881.54296875,
+      "y": 423,
+      "width": 173.390625,
+      "height": 60,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [
+          "subgraph_group_IngestDAG",
+          "subgraph_group_Airflow"
+        ],
+        "text": "fetch_scores",
+        "fontSize": 20
+      },
+      "link": null
+    },
+    {
+      "id": "WaitIngest",
+      "type": "diamond",
+      "groupIds": [
+        "subgraph_group_TransformDAG",
+        "subgraph_group_Airflow"
+      ],
+      "x": 895.87109375,
+      "y": 808.089729309082,
+      "width": 194.53125,
+      "height": 194.53125,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [
+          "subgraph_group_TransformDAG",
+          "subgraph_group_Airflow"
+        ],
+        "text": "wait_for_ingest",
+        "fontSize": 20
+      },
+      "link": null
+    },
+    {
+      "id": "TransformEvents",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_TransformDAG",
+        "subgraph_group_Airflow"
+      ],
+      "x": 628.63671875,
+      "y": 1052.620979309082,
+      "width": 214.515625,
+      "height": 60,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [
+          "subgraph_group_TransformDAG",
+          "subgraph_group_Airflow"
+        ],
+        "text": "transform_events",
+        "fontSize": 20
+      },
+      "link": null
+    },
+    {
+      "id": "TransformOdds",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_TransformDAG",
+        "subgraph_group_Airflow"
+      ],
+      "x": 893.15234375,
+      "y": 1052.620979309082,
+      "width": 198.96875,
+      "height": 60,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [
+          "subgraph_group_TransformDAG",
+          "subgraph_group_Airflow"
+        ],
+        "text": "transform_odds",
+        "fontSize": 20
+      },
+      "link": null
+    },
+    {
+      "id": "TransformScores",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_TransformDAG",
+        "subgraph_group_Airflow"
+      ],
+      "x": 1142.12109375,
+      "y": 1052.620979309082,
+      "width": 214.5,
+      "height": 60,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [
+          "subgraph_group_TransformDAG",
+          "subgraph_group_Airflow"
+        ],
+        "text": "transform_scores",
+        "fontSize": 20
+      },
+      "link": null
+    },
+    {
+      "id": "FetchProps",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_PlayerPropsDAG",
+        "subgraph_group_Airflow"
+      ],
+      "x": 143.5546875,
+      "y": 1365.753303527832,
+      "width": 230.109375,
+      "height": 90,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [
+          "subgraph_group_PlayerPropsDAG",
+          "subgraph_group_Airflow"
+        ],
+        "text": "fetch_player_props\\nper-event loop",
+        "fontSize": 20
+      },
+      "link": null
+    },
+    {
+      "id": "TransformProps",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_PlayerPropsDAG",
+        "subgraph_group_Airflow"
+      ],
+      "x": 63,
+      "y": 1595.753303527832,
+      "width": 271.21875,
+      "height": 60,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [
+          "subgraph_group_PlayerPropsDAG",
+          "subgraph_group_Airflow"
+        ],
+        "text": "transform_player_props",
+        "fontSize": 20
+      },
+      "link": null
+    },
+    {
+      "id": "OddsClient",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_Plugins"
+      ],
+      "x": 2101.90234375,
+      "y": 263,
+      "width": 199,
+      "height": 60,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [
+          "subgraph_group_Plugins"
+        ],
+        "text": "odds_api_client",
+        "fontSize": 20
+      },
+      "link": null
+    },
+    {
+      "id": "DBClient",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_Plugins"
+      ],
+      "x": 2056.33984375,
+      "y": 423,
+      "width": 140.0625,
+      "height": 60,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [
+          "subgraph_group_Plugins"
+        ],
+        "text": "db_client",
+        "fontSize": 20
+      },
+      "link": null
+    },
+    {
+      "id": "Transformers",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_Plugins"
+      ],
+      "x": 2006.37109375,
+      "y": 1565.753303527832,
+      "width": 260,
+      "height": 120,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [
+          "subgraph_group_Plugins"
+        ],
+        "text": "transformers/\\nevents · odds · scores · player_props",
+        "fontSize": 20
+      },
+      "link": null
+    },
+    {
+      "id": "SlackNotifier",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_Plugins"
+      ],
+      "x": 2336.37109375,
+      "y": 1595.753303527832,
+      "width": 176.71875,
+      "height": 60,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [
+          "subgraph_group_Plugins"
+        ],
+        "text": "slack_notifier",
+        "fontSize": 20
+      },
+      "link": null
+    },
+    {
+      "id": "RawTable",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_PostgreSQL"
+      ],
+      "x": 1693.8984375,
+      "y": 612.9999992507524,
+      "width": 188.4375,
+      "height": 90.08972930908203,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [
+          "subgraph_group_PostgreSQL"
+        ],
+        "text": "raw_api_responses",
+        "fontSize": 16
+      },
+      "link": null
+    },
+    {
+      "id": "GamesTable",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_PostgreSQL"
+      ],
+      "x": 1499.16015625,
+      "y": 1187.6209798811972,
+      "width": 75.03125,
+      "height": 73.13232421875,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [
+          "subgraph_group_PostgreSQL"
+        ],
+        "text": "games",
+        "fontSize": 20
+      },
+      "link": null
+    },
+    {
+      "id": "OddsTable",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_PostgreSQL"
+      ],
+      "x": 1624.19140625,
+      "y": 1189.749513606596,
+      "width": 58.375,
+      "height": 68.87525939941406,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [
+          "subgraph_group_PostgreSQL"
+        ],
+        "text": "odds",
+        "fontSize": 18
+      },
+      "link": null
+    },
+    {
+      "id": "ScoresTable",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_PostgreSQL"
+      ],
+      "x": 1732.56640625,
+      "y": 1187.753520051607,
+      "width": 73.90625,
+      "height": 72.86724853515625,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [
+          "subgraph_group_PostgreSQL"
+        ],
+        "text": "scores",
+        "fontSize": 16
+      },
+      "link": null
+    },
+    {
+      "id": "PropsTable",
+      "type": "rectangle",
+      "groupIds": [
+        "subgraph_group_PostgreSQL"
+      ],
+      "x": 1616.5234375,
+      "y": 1785.7533056823431,
+      "width": 130.625,
+      "height": 83.32518768310547,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [
+          "subgraph_group_PostgreSQL"
+        ],
+        "text": "player_props",
+        "fontSize": 15
+      },
+      "link": null
+    },
+    {
+      "id": "Slack",
+      "type": "rectangle",
+      "groupIds": [],
+      "x": 2370.27734375,
+      "y": 1797.4158973693848,
+      "width": 108.90625,
+      "height": 60,
+      "strokeWidth": 2,
+      "label": {
+        "groupIds": [],
+        "text": "Slack",
+        "fontSize": 20
+      },
+      "link": null
+    },
+    {
+      "id": "OddsAPI_OddsClient",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 2201.402,
+      "y": 128,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          55
+        ],
+        [
+          0,
+          110
+        ],
+        [
+          0,
+          131
+        ]
+      ],
+      "label": {
+        "text": "events / odds / scores / props JSON",
+        "fontSize": 20,
+        "groupIds": []
+      },
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "OddsAPI"
+      },
+      "end": {
+        "id": "OddsClient"
+      }
+    },
+    {
+      "id": "OddsClient_FetchEvents",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 2149.567,
+      "y": 323,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -43.19599999999991,
+          25
+        ],
+        [
+          -43.19599999999991,
+          50
+        ],
+        [
+          -43.19599999999991,
+          75
+        ],
+        [
+          -1539.933,
+          126.85700000000003
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "OddsClient"
+      },
+      "end": {
+        "id": "FetchEvents"
+      }
+    },
+    {
+      "id": "OddsClient_FetchOdds",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 2160.476,
+      "y": 323,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -34.10500000000002,
+          25
+        ],
+        [
+          -34.10500000000002,
+          50
+        ],
+        [
+          -34.10500000000002,
+          75
+        ],
+        [
+          -1324.9360000000001,
+          126.68
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "OddsClient"
+      },
+      "end": {
+        "id": "FetchOdds"
+      }
+    },
+    {
+      "id": "OddsClient_FetchScores",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 2191.703,
+      "y": 323,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -8.08199999999988,
+          25
+        ],
+        [
+          -8.08199999999988,
+          50
+        ],
+        [
+          -8.08199999999988,
+          75
+        ],
+        [
+          -1132.773,
+          125.89600000000002
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "OddsClient"
+      },
+      "end": {
+        "id": "FetchScores"
+      }
+    },
+    {
+      "id": "OddsClient_FetchProps",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 2217.766,
+      "y": 323,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          13.635999999999967,
+          25
+        ],
+        [
+          13.635999999999967,
+          50
+        ],
+        [
+          13.635999999999967,
+          75
+        ],
+        [
+          13.635999999999967,
+          130
+        ],
+        [
+          13.635999999999967,
+          185
+        ],
+        [
+          13.635999999999967,
+          225
+        ],
+        [
+          13.635999999999967,
+          265
+        ],
+        [
+          13.635999999999967,
+          335.04499999999996
+        ],
+        [
+          13.635999999999967,
+          420.09000000000003
+        ],
+        [
+          13.635999999999967,
+          460.09000000000003
+        ],
+        [
+          13.635999999999967,
+          582.355
+        ],
+        [
+          13.635999999999967,
+          704.6210000000001
+        ],
+        [
+          13.635999999999967,
+          759.6210000000001
+        ],
+        [
+          13.635999999999967,
+          814.6210000000001
+        ],
+        [
+          13.635999999999967,
+          839.6210000000001
+        ],
+        [
+          13.635999999999967,
+          901.1869999999999
+        ],
+        [
+          13.635999999999967,
+          977.7529999999999
+        ],
+        [
+          13.635999999999967,
+          1017.7529999999999
+        ],
+        [
+          -1840.104,
+          1083.529
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "OddsClient"
+      },
+      "end": {
+        "id": "FetchProps"
+      }
+    },
+    {
+      "id": "FetchEvents_RawTable",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 543.629,
+      "y": 483,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          20.586000000000013,
+          25
+        ],
+        [
+          20.586000000000013,
+          65
+        ],
+        [
+          20.586000000000013,
+          105
+        ],
+        [
+          1146.2759999999998,
+          169.42399999999998
+        ]
+      ],
+      "label": {
+        "text": "store raw JSON",
+        "fontSize": 20,
+        "groupIds": []
+      },
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "FetchEvents"
+      },
+      "end": {
+        "id": "RawTable"
+      }
+    },
+    {
+      "id": "FetchOdds_RawTable",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 752.613,
+      "y": 483,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          25
+        ],
+        [
+          0,
+          65
+        ],
+        [
+          0,
+          105
+        ],
+        [
+          937.2949999999998,
+          168.40200000000004
+        ]
+      ],
+      "label": {
+        "text": "store raw JSON",
+        "fontSize": 20,
+        "groupIds": []
+      },
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "FetchOdds"
+      },
+      "end": {
+        "id": "RawTable"
+      }
+    },
+    {
+      "id": "FetchScores_RawTable",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 968.238,
+      "y": 483,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          25
+        ],
+        [
+          0,
+          65
+        ],
+        [
+          0,
+          105
+        ],
+        [
+          721.675,
+          166.65499999999997
+        ]
+      ],
+      "label": {
+        "text": "store raw JSON",
+        "fontSize": 20,
+        "groupIds": []
+      },
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "FetchScores"
+      },
+      "end": {
+        "id": "RawTable"
+      }
+    },
+    {
+      "id": "FetchProps_RawTable",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 373.664,
+      "y": 1405.665,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          1467.809,
+          -64.91200000000003
+        ],
+        [
+          1467.809,
+          -104.91200000000003
+        ],
+        [
+          1467.809,
+          -181.47800000000007
+        ],
+        [
+          1467.809,
+          -243.04399999999987
+        ],
+        [
+          1467.809,
+          -268.04399999999987
+        ],
+        [
+          1467.809,
+          -323.04399999999987
+        ],
+        [
+          1467.809,
+          -378.04399999999987
+        ],
+        [
+          1467.809,
+          -500.30999999999995
+        ],
+        [
+          1467.809,
+          -622.5749999999999
+        ],
+        [
+          1467.809,
+          -662.5749999999999
+        ],
+        [
+          1444.813,
+          -699.8629999999999
+        ]
+      ],
+      "label": {
+        "text": "store raw JSON",
+        "fontSize": 20,
+        "groupIds": []
+      },
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "FetchProps"
+      },
+      "end": {
+        "id": "RawTable"
+      }
+    },
+    {
+      "id": "RawTable_WaitIngest",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 1707.836,
+      "y": 695.927,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -71.28899999999999,
+          47.16300000000001
+        ],
+        [
+          -71.28899999999999,
+          87.16300000000001
+        ],
+        [
+          -629.5250000000001,
+          193.16099999999994
+        ]
+      ],
+      "label": {
+        "text": "latest raw response",
+        "fontSize": 20,
+        "groupIds": []
+      },
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "RawTable"
+      },
+      "end": {
+        "id": "WaitIngest"
+      }
+    },
+    {
+      "id": "WaitIngest_TransformEvents",
+      "type": "arrow",
+      "groupIds": [
+        "subgraph_group_TransformDAG",
+        "subgraph_group_Airflow"
+      ],
+      "x": 926.748,
+      "y": 936.733,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -190.85300000000007,
+          90.88800000000015
+        ],
+        [
+          -190.85300000000007,
+          111.88800000000015
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "WaitIngest"
+      },
+      "end": {
+        "id": "TransformEvents"
+      }
+    },
+    {
+      "id": "WaitIngest_TransformOdds",
+      "type": "arrow",
+      "groupIds": [
+        "subgraph_group_TransformDAG",
+        "subgraph_group_Airflow"
+      ],
+      "x": 992.637,
+      "y": 1002.621,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          25.000000000000114
+        ],
+        [
+          0,
+          46.000000000000114
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "WaitIngest"
+      },
+      "end": {
+        "id": "TransformOdds"
+      }
+    },
+    {
+      "id": "WaitIngest_TransformScores",
+      "type": "arrow",
+      "groupIds": [
+        "subgraph_group_TransformDAG",
+        "subgraph_group_Airflow"
+      ],
+      "x": 1058.524,
+      "y": 936.733,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          190.8470000000002,
+          90.88800000000015
+        ],
+        [
+          190.8470000000002,
+          111.88800000000015
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "WaitIngest"
+      },
+      "end": {
+        "id": "TransformScores"
+      }
+    },
+    {
+      "id": "TransformEvents_GamesTable",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 735.895,
+      "y": 1112.621,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          25
+        ],
+        [
+          0,
+          50
+        ],
+        [
+          759.277,
+          108.375
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "TransformEvents"
+      },
+      "end": {
+        "id": "GamesTable"
+      }
+    },
+    {
+      "id": "TransformOdds_OddsTable",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 992.637,
+      "y": 1112.621,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          25
+        ],
+        [
+          0,
+          50
+        ],
+        [
+          627.5720000000001,
+          108.47499999999991
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "TransformOdds"
+      },
+      "end": {
+        "id": "OddsTable"
+      }
+    },
+    {
+      "id": "TransformScores_ScoresTable",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 1249.371,
+      "y": 1112.621,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          25
+        ],
+        [
+          0,
+          50
+        ],
+        [
+          479.22299999999996,
+          106.72199999999998
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "TransformScores"
+      },
+      "end": {
+        "id": "ScoresTable"
+      }
+    },
+    {
+      "id": "GamesTable_FetchProps",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 1536.676,
+      "y": 1260.753,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          40
+        ],
+        [
+          0,
+          80
+        ],
+        [
+          -1159.018,
+          143.48000000000002
+        ]
+      ],
+      "label": {
+        "text": "game_ids for today",
+        "fontSize": 20,
+        "groupIds": []
+      },
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "GamesTable"
+      },
+      "end": {
+        "id": "FetchProps"
+      }
+    },
+    {
+      "id": "TransformProps_PropsTable",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 198.609,
+      "y": 1655.753,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          55
+        ],
+        [
+          0,
+          80
+        ],
+        [
+          1443.0710000000001,
+          105
+        ],
+        [
+          1456.124,
+          127.51999999999998
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "TransformProps"
+      },
+      "end": {
+        "id": "PropsTable"
+      }
+    },
+    {
+      "id": "FetchProps_TransformProps",
+      "type": "arrow",
+      "groupIds": [
+        "subgraph_group_PlayerPropsDAG",
+        "subgraph_group_Airflow"
+      ],
+      "x": 231.609,
+      "y": 1455.753,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -33,
+          55
+        ],
+        [
+          -33,
+          136
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "FetchProps"
+      },
+      "end": {
+        "id": "TransformProps"
+      }
+    },
+    {
+      "id": "IngestDAG_SlackNotifier",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 473.637,
+      "y": 508,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          40
+        ],
+        [
+          0,
+          80
+        ],
+        [
+          0,
+          150.04499999999996
+        ],
+        [
+          0,
+          235.09000000000003
+        ],
+        [
+          0,
+          275.09000000000003
+        ],
+        [
+          0,
+          397.355
+        ],
+        [
+          0,
+          519.6210000000001
+        ],
+        [
+          0,
+          574.6210000000001
+        ],
+        [
+          0,
+          629.6210000000001
+        ],
+        [
+          0,
+          654.6210000000001
+        ],
+        [
+          0,
+          716.1869999999999
+        ],
+        [
+          0,
+          792.7529999999999
+        ],
+        [
+          0,
+          832.7529999999999
+        ],
+        [
+          0,
+          902.7529999999999
+        ],
+        [
+          0,
+          1002.7529999999999
+        ],
+        [
+          1858.7410000000002,
+          1112.31
+        ]
+      ],
+      "label": {
+        "text": "on_success / on_failure",
+        "fontSize": 20,
+        "groupIds": []
+      },
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "IngestDAG"
+      },
+      "end": {
+        "id": "SlackNotifier"
+      }
+    },
+    {
+      "id": "PlayerPropsDAG_SlackNotifier",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 453.637,
+      "y": 1613.556,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          1878.7340000000002,
+          7.356999999999971
+        ]
+      ],
+      "label": {
+        "text": "on_success / on_failure",
+        "fontSize": 20,
+        "groupIds": []
+      },
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "PlayerPropsDAG"
+      },
+      "end": {
+        "id": "SlackNotifier"
+      }
+    },
+    {
+      "id": "SlackNotifier_Slack",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 2424.73,
+      "y": 1655.753,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          55
+        ],
+        [
+          0,
+          80
+        ],
+        [
+          0,
+          105
+        ],
+        [
+          0,
+          137.663
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "SlackNotifier"
+      },
+      "end": {
+        "id": "Slack"
+      }
+    },
+    {
+      "id": "DBClient_RawTable",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 2092.272,
+      "y": 483,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -28.416999999999916,
+          25
+        ],
+        [
+          -28.416999999999916,
+          65
+        ],
+        [
+          -28.416999999999916,
+          105
+        ],
+        [
+          -206.05899999999997,
+          150.12599999999998
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "DBClient"
+      },
+      "end": {
+        "id": "RawTable"
+      }
+    },
+    {
+      "id": "DBClient_GamesTable",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 2103.181,
+      "y": 483,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -19.326000000000022,
+          25
+        ],
+        [
+          -19.326000000000022,
+          65
+        ],
+        [
+          -19.326000000000022,
+          105
+        ],
+        [
+          -19.326000000000022,
+          175.04499999999996
+        ],
+        [
+          -19.326000000000022,
+          260.09000000000003
+        ],
+        [
+          -19.326000000000022,
+          300.09000000000003
+        ],
+        [
+          -19.326000000000022,
+          422.355
+        ],
+        [
+          -19.326000000000022,
+          544.6210000000001
+        ],
+        [
+          -19.326000000000022,
+          599.6210000000001
+        ],
+        [
+          -19.326000000000022,
+          654.6210000000001
+        ],
+        [
+          -19.326000000000022,
+          679.6210000000001
+        ],
+        [
+          -525.0150000000001,
+          736.519
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "DBClient"
+      },
+      "end": {
+        "id": "GamesTable"
+      }
+    },
+    {
+      "id": "DBClient_OddsTable",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 2126.371,
+      "y": 483,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          25
+        ],
+        [
+          0,
+          65
+        ],
+        [
+          0,
+          105
+        ],
+        [
+          0,
+          175.04499999999996
+        ],
+        [
+          0,
+          260.09000000000003
+        ],
+        [
+          0,
+          300.09000000000003
+        ],
+        [
+          0,
+          422.355
+        ],
+        [
+          0,
+          544.6210000000001
+        ],
+        [
+          0,
+          599.6210000000001
+        ],
+        [
+          0,
+          654.6210000000001
+        ],
+        [
+          0,
+          679.6210000000001
+        ],
+        [
+          -439.8380000000002,
+          736.8720000000001
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "DBClient"
+      },
+      "end": {
+        "id": "OddsTable"
+      }
+    },
+    {
+      "id": "DBClient_ScoresTable",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 2155.016,
+      "y": 483,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          23.871000000000095,
+          25
+        ],
+        [
+          23.871000000000095,
+          65
+        ],
+        [
+          23.871000000000095,
+          105
+        ],
+        [
+          23.871000000000095,
+          175.04499999999996
+        ],
+        [
+          23.871000000000095,
+          260.09000000000003
+        ],
+        [
+          23.871000000000095,
+          300.09000000000003
+        ],
+        [
+          23.871000000000095,
+          422.355
+        ],
+        [
+          23.871000000000095,
+          544.6210000000001
+        ],
+        [
+          23.871000000000095,
+          599.6210000000001
+        ],
+        [
+          23.871000000000095,
+          654.6210000000001
+        ],
+        [
+          23.871000000000095,
+          679.6210000000001
+        ],
+        [
+          -344.58799999999997,
+          735.0350000000001
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "DBClient"
+      },
+      "end": {
+        "id": "ScoresTable"
+      }
+    },
+    {
+      "id": "DBClient_PropsTable",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 2196.402,
+      "y": 475.01,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          104.96900000000005,
+          32.99000000000001
+        ],
+        [
+          104.96900000000005,
+          72.99000000000001
+        ],
+        [
+          104.96900000000005,
+          112.99000000000001
+        ],
+        [
+          104.96900000000005,
+          183.03499999999997
+        ],
+        [
+          104.96900000000005,
+          268.08000000000004
+        ],
+        [
+          104.96900000000005,
+          308.08000000000004
+        ],
+        [
+          104.96900000000005,
+          430.345
+        ],
+        [
+          104.96900000000005,
+          552.6110000000001
+        ],
+        [
+          104.96900000000005,
+          607.6110000000001
+        ],
+        [
+          104.96900000000005,
+          662.6110000000001
+        ],
+        [
+          104.96900000000005,
+          687.6110000000001
+        ],
+        [
+          104.96900000000005,
+          749.1769999999999
+        ],
+        [
+          104.96900000000005,
+          825.7429999999999
+        ],
+        [
+          104.96900000000005,
+          865.7429999999999
+        ],
+        [
+          104.96900000000005,
+          935.7429999999999
+        ],
+        [
+          104.96900000000005,
+          1035.743
+        ],
+        [
+          104.96900000000005,
+          1150.743
+        ],
+        [
+          104.96900000000005,
+          1235.743
+        ],
+        [
+          104.96900000000005,
+          1260.743
+        ],
+        [
+          -474.4100000000001,
+          1285.743
+        ],
+        [
+          -487.46299999999997,
+          1308.263
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "DBClient"
+      },
+      "end": {
+        "id": "PropsTable"
+      }
+    }
+  ],
+  "appState": {
+    "gridSize": null,
+    "viewBackgroundColor": "#ffffff"
+  },
+  "files": {}
+}
