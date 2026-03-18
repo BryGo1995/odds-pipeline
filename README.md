@@ -72,12 +72,21 @@ To trigger the backfill with a date range, click **Trigger DAG w/ config** in th
 {"date_from": "2024-01-01", "date_to": "2024-03-31"}
 ```
 
+### Manual runs
+
+The `nba_transform` DAG has an `ExternalTaskSensor` (`wait_for_ingest`) that waits for `nba_ingest` to complete. For scheduled runs this works automatically. For manual triggers, execution dates won't align, so follow these steps:
+
+1. Trigger `nba_ingest` and wait for all tasks to show **success**
+2. Trigger `nba_transform`
+3. In the Graph view, click `wait_for_ingest` → **Mark Success**
+4. The downstream transform tasks will queue and run automatically
+
 ## Configuration
 
 Edit `config/settings.py` to control what data is fetched:
 
 ```python
-MARKETS = ["h2h", "spreads", "totals", "player_props"]  # add/remove freely
+MARKETS = ["h2h", "spreads", "totals"]  # add/remove freely
 BOOKMAKERS = ["draftkings", "fanduel", "betmgm"]        # fewer = less API quota used
 ```
 
