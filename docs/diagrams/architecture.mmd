@@ -1,27 +1,10 @@
 flowchart TD
-    OddsAPI["The Odds API"]
-
-    subgraph Airflow["Apache Airflow"]
-        Ingest["nba_ingest\n8am & 8pm daily"]
-        Transform["nba_transform\n15 min after ingest"]
-        PlayerProps["nba_player_props\n10pm daily"]
-    end
-
-    subgraph DB["PostgreSQL"]
-        Raw[("Raw Layer\nraw_api_responses")]
-        Normalized[("Normalized Layer\ngames · odds · scores · player_props")]
-    end
-
-    Slack["Slack"]
-
-    OddsAPI -->|"Fetch events, odds, scores"| Ingest
-    Ingest -->|"Store raw JSON"| Raw
-    Raw -->|"Read latest response"| Transform
-    Transform -->|"Write structured rows"| Normalized
-
-    Normalized -->|"Look up upcoming game IDs"| PlayerProps
-    OddsAPI -->|"Fetch player props per game"| PlayerProps
-    PlayerProps -->|"Store raw + normalized props"| DB
-
-    Ingest -->|"Success / failure alert"| Slack
-    PlayerProps -->|"Success / failure alert"| Slack
+    OddsAPI["Odds API"] -->|game odds| IngestDAG["NBA Ingest DAG"]
+    OddsAPI -->|player props| PlayerPropsDAG["Player Props DAG"]
+    IngestDAG -->|raw responses| Postgres[("PostgreSQL")]
+    IngestDAG -->|triggers| TransformDAG["Transform DAG"]
+    Postgres -->|game IDs| PlayerPropsDAG
+    TransformDAG -->|structured tables| Postgres
+    PlayerPropsDAG -->|prop odds| Postgres
+    IngestDAG -->|alerts| Slack["Slack"]
+    PlayerPropsDAG -->|alerts| Slack

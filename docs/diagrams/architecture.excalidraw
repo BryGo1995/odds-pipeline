@@ -4,122 +4,12 @@
   "source": "https://excalidraw.com",
   "elements": [
     {
-      "id": "DB",
-      "type": "rectangle",
-      "groupIds": [
-        "subgraph_group_DB"
-      ],
-      "x": 702.015625,
-      "y": 373,
-      "width": 409.609375,
-      "height": 632.5161743164062,
-      "boundElements": [
-        {
-          "id": "lbl_DB",
-          "type": "text"
-        }
-      ]
-    },
-    {
-      "id": "lbl_DB",
-      "type": "text",
-      "x": 702.015625,
-      "y": 383,
-      "width": 409.609375,
-      "height": 25,
-      "angle": 0,
-      "strokeColor": "#1e1e1e",
-      "backgroundColor": "transparent",
-      "fillStyle": "solid",
-      "strokeWidth": 1,
-      "strokeStyle": "solid",
-      "roughness": 1,
-      "opacity": 100,
-      "groupIds": [
-        "subgraph_group_DB"
-      ],
-      "frameId": null,
-      "roundness": null,
-      "seed": 199982,
-      "version": 1,
-      "versionNonce": 299973,
-      "isDeleted": false,
-      "boundElements": null,
-      "updated": 1773875262196,
-      "link": null,
-      "locked": false,
-      "text": "PostgreSQL",
-      "fontSize": 20,
-      "fontFamily": 1,
-      "textAlign": "center",
-      "verticalAlign": "top",
-      "containerId": "DB",
-      "originalText": "PostgreSQL",
-      "rawText": "PostgreSQL",
-      "lineHeight": 1.25
-    },
-    {
-      "id": "Airflow",
-      "type": "rectangle",
-      "groupIds": [
-        "subgraph_group_Airflow"
-      ],
-      "x": 8,
-      "y": 178,
-      "width": 674.015625,
-      "height": 1052.5162353515625,
-      "boundElements": [
-        {
-          "id": "lbl_Airflow",
-          "type": "text"
-        }
-      ]
-    },
-    {
-      "id": "lbl_Airflow",
-      "type": "text",
-      "x": 8,
-      "y": 188,
-      "width": 674.015625,
-      "height": 25,
-      "angle": 0,
-      "strokeColor": "#1e1e1e",
-      "backgroundColor": "transparent",
-      "fillStyle": "solid",
-      "strokeWidth": 1,
-      "strokeStyle": "solid",
-      "roughness": 1,
-      "opacity": 100,
-      "groupIds": [
-        "subgraph_group_Airflow"
-      ],
-      "frameId": null,
-      "roundness": null,
-      "seed": 399964,
-      "version": 1,
-      "versionNonce": 499955,
-      "isDeleted": false,
-      "boundElements": null,
-      "updated": 1773875262196,
-      "link": null,
-      "locked": false,
-      "text": "Apache Airflow",
-      "fontSize": 20,
-      "fontFamily": 1,
-      "textAlign": "center",
-      "verticalAlign": "top",
-      "containerId": "Airflow",
-      "originalText": "Apache Airflow",
-      "rawText": "Apache Airflow",
-      "lineHeight": 1.25
-    },
-    {
       "id": "OddsAPI",
       "type": "rectangle",
       "groupIds": [],
-      "x": 175.2265625,
+      "x": 141.09765625,
       "y": 8,
-      "width": 184.515625,
+      "width": 144.5,
       "height": 60,
       "strokeWidth": 2,
       "link": null,
@@ -133,9 +23,115 @@
     {
       "id": "lbl_OddsAPI",
       "type": "text",
-      "x": 175.2265625,
+      "x": 141.09765625,
       "y": 25.5,
-      "width": 184.515625,
+      "width": 144.5,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 199982,
+      "version": 1,
+      "versionNonce": 299973,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773884445625,
+      "link": null,
+      "locked": false,
+      "text": "Odds API",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "OddsAPI",
+      "originalText": "Odds API",
+      "rawText": "Odds API",
+      "lineHeight": 1.25
+    },
+    {
+      "id": "IngestDAG",
+      "type": "rectangle",
+      "groupIds": [],
+      "x": 178.89453125,
+      "y": 148,
+      "width": 208.96875,
+      "height": 60,
+      "strokeWidth": 2,
+      "link": null,
+      "boundElements": [
+        {
+          "id": "lbl_IngestDAG",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_IngestDAG",
+      "type": "text",
+      "x": 178.89453125,
+      "y": 165.5,
+      "width": 208.96875,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 399964,
+      "version": 1,
+      "versionNonce": 499955,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773884445625,
+      "link": null,
+      "locked": false,
+      "text": "NBA Ingest DAG",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "IngestDAG",
+      "originalText": "NBA Ingest DAG",
+      "rawText": "NBA Ingest DAG",
+      "lineHeight": 1.25
+    },
+    {
+      "id": "PlayerPropsDAG",
+      "type": "rectangle",
+      "groupIds": [],
+      "x": 101.65234375,
+      "y": 590.3423080444336,
+      "width": 223.390625,
+      "height": 60,
+      "strokeWidth": 2,
+      "link": null,
+      "boundElements": [
+        {
+          "id": "lbl_PlayerPropsDAG",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_PlayerPropsDAG",
+      "type": "text",
+      "x": 101.65234375,
+      "y": 607.8423080444336,
+      "width": 223.390625,
       "height": 25,
       "angle": 0,
       "strokeColor": "#1e1e1e",
@@ -153,45 +149,43 @@
       "versionNonce": 699937,
       "isDeleted": false,
       "boundElements": null,
-      "updated": 1773875262196,
+      "updated": 1773884445625,
       "link": null,
       "locked": false,
-      "text": "The Odds API",
+      "text": "Player Props DAG",
       "fontSize": 20,
       "fontFamily": 1,
       "textAlign": "center",
       "verticalAlign": "middle",
-      "containerId": "OddsAPI",
-      "originalText": "The Odds API",
-      "rawText": "The Odds API",
+      "containerId": "PlayerPropsDAG",
+      "originalText": "Player Props DAG",
+      "rawText": "Player Props DAG",
       "lineHeight": 1.25
     },
     {
-      "id": "Ingest",
+      "id": "Postgres",
       "type": "rectangle",
-      "groupIds": [
-        "subgraph_group_Airflow"
-      ],
-      "x": 43,
-      "y": 203,
-      "width": 208.96875,
-      "height": 90,
+      "groupIds": [],
+      "x": 321.23828125,
+      "y": 427.9999998139698,
+      "width": 123.953125,
+      "height": 82.3423080444336,
       "strokeWidth": 2,
       "link": null,
       "boundElements": [
         {
-          "id": "lbl_Ingest",
+          "id": "lbl_Postgres",
           "type": "text"
         }
       ]
     },
     {
-      "id": "lbl_Ingest",
+      "id": "lbl_Postgres",
       "type": "text",
-      "x": 43,
-      "y": 223,
-      "width": 208.96875,
-      "height": 50,
+      "x": 321.23828125,
+      "y": 457.9211538361866,
+      "width": 123.953125,
+      "height": 22.5,
       "angle": 0,
       "strokeColor": "#1e1e1e",
       "backgroundColor": "transparent",
@@ -200,9 +194,7 @@
       "strokeStyle": "solid",
       "roughness": 1,
       "opacity": 100,
-      "groupIds": [
-        "subgraph_group_Airflow"
-      ],
+      "groupIds": [],
       "frameId": null,
       "roundness": null,
       "seed": 799928,
@@ -210,45 +202,43 @@
       "versionNonce": 899919,
       "isDeleted": false,
       "boundElements": null,
-      "updated": 1773875262196,
+      "updated": 1773884445625,
       "link": null,
       "locked": false,
-      "text": "nba_ingest\n8am & 8pm daily",
-      "fontSize": 20,
+      "text": "PostgreSQL",
+      "fontSize": 18,
       "fontFamily": 1,
       "textAlign": "center",
       "verticalAlign": "middle",
-      "containerId": "Ingest",
-      "originalText": "nba_ingest\n8am & 8pm daily",
-      "rawText": "nba_ingest\n8am & 8pm daily",
+      "containerId": "Postgres",
+      "originalText": "PostgreSQL",
+      "rawText": "PostgreSQL",
       "lineHeight": 1.25
     },
     {
-      "id": "Transform",
+      "id": "TransformDAG",
       "type": "rectangle",
-      "groupIds": [
-        "subgraph_group_Airflow"
-      ],
-      "x": 422.484375,
-      "y": 628.0897216796875,
-      "width": 224.53125,
-      "height": 90,
+      "groupIds": [],
+      "x": 347.578125,
+      "y": 288,
+      "width": 199.28125,
+      "height": 60,
       "strokeWidth": 2,
       "link": null,
       "boundElements": [
         {
-          "id": "lbl_Transform",
+          "id": "lbl_TransformDAG",
           "type": "text"
         }
       ]
     },
     {
-      "id": "lbl_Transform",
+      "id": "lbl_TransformDAG",
       "type": "text",
-      "x": 422.484375,
-      "y": 648.0897216796875,
-      "width": 224.53125,
-      "height": 50,
+      "x": 347.578125,
+      "y": 305.5,
+      "width": 199.28125,
+      "height": 25,
       "angle": 0,
       "strokeColor": "#1e1e1e",
       "backgroundColor": "transparent",
@@ -257,9 +247,7 @@
       "strokeStyle": "solid",
       "roughness": 1,
       "opacity": 100,
-      "groupIds": [
-        "subgraph_group_Airflow"
-      ],
+      "groupIds": [],
       "frameId": null,
       "roundness": null,
       "seed": 999910,
@@ -267,196 +255,25 @@
       "versionNonce": 1099901,
       "isDeleted": false,
       "boundElements": null,
-      "updated": 1773875262196,
+      "updated": 1773884445625,
       "link": null,
       "locked": false,
-      "text": "nba_transform\n15 min after ingest",
+      "text": "Transform DAG",
       "fontSize": 20,
       "fontFamily": 1,
       "textAlign": "center",
       "verticalAlign": "middle",
-      "containerId": "Transform",
-      "originalText": "nba_transform\n15 min after ingest",
-      "rawText": "nba_transform\n15 min after ingest",
-      "lineHeight": 1.25
-    },
-    {
-      "id": "PlayerProps",
-      "type": "rectangle",
-      "groupIds": [
-        "subgraph_group_Airflow"
-      ],
-      "x": 277.421875,
-      "y": 1115.5162048339844,
-      "width": 220.125,
-      "height": 90,
-      "strokeWidth": 2,
-      "link": null,
-      "boundElements": [
-        {
-          "id": "lbl_PlayerProps",
-          "type": "text"
-        }
-      ]
-    },
-    {
-      "id": "lbl_PlayerProps",
-      "type": "text",
-      "x": 277.421875,
-      "y": 1135.5162048339844,
-      "width": 220.125,
-      "height": 50,
-      "angle": 0,
-      "strokeColor": "#1e1e1e",
-      "backgroundColor": "transparent",
-      "fillStyle": "solid",
-      "strokeWidth": 1,
-      "strokeStyle": "solid",
-      "roughness": 1,
-      "opacity": 100,
-      "groupIds": [
-        "subgraph_group_Airflow"
-      ],
-      "frameId": null,
-      "roundness": null,
-      "seed": 1199892,
-      "version": 1,
-      "versionNonce": 1299883,
-      "isDeleted": false,
-      "boundElements": null,
-      "updated": 1773875262196,
-      "link": null,
-      "locked": false,
-      "text": "nba_player_props\n10pm daily",
-      "fontSize": 20,
-      "fontFamily": 1,
-      "textAlign": "center",
-      "verticalAlign": "middle",
-      "containerId": "PlayerProps",
-      "originalText": "nba_player_props\n10pm daily",
-      "rawText": "nba_player_props\n10pm daily",
-      "lineHeight": 1.25
-    },
-    {
-      "id": "Raw",
-      "type": "rectangle",
-      "groupIds": [
-        "subgraph_group_DB"
-      ],
-      "x": 848.07421875,
-      "y": 397.9999954360551,
-      "width": 188.4375,
-      "height": 120.0897216796875,
-      "strokeWidth": 2,
-      "link": null,
-      "boundElements": [
-        {
-          "id": "lbl_Raw",
-          "type": "text"
-        }
-      ]
-    },
-    {
-      "id": "lbl_Raw",
-      "type": "text",
-      "x": 848.07421875,
-      "y": 443.04485627589884,
-      "width": 188.4375,
-      "height": 30,
-      "angle": 0,
-      "strokeColor": "#1e1e1e",
-      "backgroundColor": "transparent",
-      "fillStyle": "solid",
-      "strokeWidth": 1,
-      "strokeStyle": "solid",
-      "roughness": 1,
-      "opacity": 100,
-      "groupIds": [
-        "subgraph_group_DB"
-      ],
-      "frameId": null,
-      "roundness": null,
-      "seed": 1399874,
-      "version": 1,
-      "versionNonce": 1499865,
-      "isDeleted": false,
-      "boundElements": null,
-      "updated": 1773875262196,
-      "link": null,
-      "locked": false,
-      "text": "Raw Layer\nraw_api_responses",
-      "fontSize": 12,
-      "fontFamily": 1,
-      "textAlign": "center",
-      "verticalAlign": "middle",
-      "containerId": "Raw",
-      "originalText": "Raw Layer\nraw_api_responses",
-      "rawText": "Raw Layer\nraw_api_responses",
-      "lineHeight": 1.25
-    },
-    {
-      "id": "Normalized",
-      "type": "rectangle",
-      "groupIds": [
-        "subgraph_group_DB"
-      ],
-      "x": 737.015625,
-      "y": 828.0897279627183,
-      "width": 215,
-      "height": 152.42648315429688,
-      "strokeWidth": 2,
-      "link": null,
-      "boundElements": [
-        {
-          "id": "lbl_Normalized",
-          "type": "text"
-        }
-      ]
-    },
-    {
-      "id": "lbl_Normalized",
-      "type": "text",
-      "x": 737.015625,
-      "y": 889.3029695398667,
-      "width": 215,
-      "height": 30,
-      "angle": 0,
-      "strokeColor": "#1e1e1e",
-      "backgroundColor": "transparent",
-      "fillStyle": "solid",
-      "strokeWidth": 1,
-      "strokeStyle": "solid",
-      "roughness": 1,
-      "opacity": 100,
-      "groupIds": [
-        "subgraph_group_DB"
-      ],
-      "frameId": null,
-      "roundness": null,
-      "seed": 1599856,
-      "version": 1,
-      "versionNonce": 1699847,
-      "isDeleted": false,
-      "boundElements": null,
-      "updated": 1773875262196,
-      "link": null,
-      "locked": false,
-      "text": "Normalized Layer\ngames · odds · scores · player_props",
-      "fontSize": 12,
-      "fontFamily": 1,
-      "textAlign": "center",
-      "verticalAlign": "middle",
-      "containerId": "Normalized",
-      "originalText": "Normalized Layer\ngames · odds · scores · player_props",
-      "rawText": "Normalized Layer\ngames · odds · scores · player_props",
+      "containerId": "TransformDAG",
+      "originalText": "Transform DAG",
+      "rawText": "Transform DAG",
       "lineHeight": 1.25
     },
     {
       "id": "Slack",
       "type": "rectangle",
       "groupIds": [],
-      "x": 213.03125,
-      "y": 1310.5162048339844,
+      "x": 51.34765625,
+      "y": 730.3423080444336,
       "width": 108.90625,
       "height": 60,
       "strokeWidth": 2,
@@ -471,9 +288,260 @@
     {
       "id": "lbl_Slack",
       "type": "text",
-      "x": 213.03125,
-      "y": 1328.0162048339844,
+      "x": 51.34765625,
+      "y": 747.8423080444336,
       "width": 108.90625,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 1199892,
+      "version": 1,
+      "versionNonce": 1299883,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773884445625,
+      "link": null,
+      "locked": false,
+      "text": "Slack",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "Slack",
+      "originalText": "Slack",
+      "rawText": "Slack",
+      "lineHeight": 1.25
+    },
+    {
+      "id": "OddsAPI_IngestDAG",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 243.361,
+      "y": 68,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          40.01800000000003,
+          40
+        ],
+        [
+          40.01800000000003,
+          76
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "OddsAPI"
+      },
+      "end": {
+        "id": "IngestDAG"
+      },
+      "boundElements": [
+        {
+          "id": "lbl_OddsAPI_IngestDAG",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_OddsAPI_IngestDAG",
+      "type": "text",
+      "x": 203.37900000000002,
+      "y": 95.5,
+      "width": 160,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 1399874,
+      "version": 1,
+      "versionNonce": 1499865,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773884445625,
+      "link": null,
+      "locked": false,
+      "text": "game odds",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "OddsAPI_IngestDAG",
+      "originalText": "game odds",
+      "rawText": "game odds",
+      "lineHeight": 1.25
+    },
+    {
+      "id": "OddsAPI_PlayerPropsDAG",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 167.978,
+      "y": 68,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -60.494000000000014,
+          40
+        ],
+        [
+          -60.494000000000014,
+          110
+        ],
+        [
+          -60.494000000000014,
+          180
+        ],
+        [
+          -60.494000000000014,
+          250
+        ],
+        [
+          -60.494000000000014,
+          320
+        ],
+        [
+          -60.494000000000014,
+          401.171
+        ],
+        [
+          -60.494000000000014,
+          482.342
+        ],
+        [
+          -3.3370000000000175,
+          520.136
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "OddsAPI"
+      },
+      "end": {
+        "id": "PlayerPropsDAG"
+      },
+      "boundElements": [
+        {
+          "id": "lbl_OddsAPI_PlayerPropsDAG",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_OddsAPI_PlayerPropsDAG",
+      "type": "text",
+      "x": 27.483999999999995,
+      "y": 305.5,
+      "width": 160,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 1599856,
+      "version": 1,
+      "versionNonce": 1699847,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1773884445625,
+      "link": null,
+      "locked": false,
+      "text": "player props",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": "OddsAPI_PlayerPropsDAG",
+      "originalText": "player props",
+      "rawText": "player props",
+      "lineHeight": 1.25
+    },
+    {
+      "id": "IngestDAG_Postgres",
+      "type": "arrow",
+      "groupIds": [],
+      "x": 268.022,
+      "y": 208,
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -20.474999999999994,
+          40
+        ],
+        [
+          -20.474999999999994,
+          110
+        ],
+        [
+          -20.474999999999994,
+          180
+        ],
+        [
+          50.043000000000006,
+          234.103
+        ]
+      ],
+      "roundness": {
+        "type": 2
+      },
+      "start": {
+        "id": "IngestDAG"
+      },
+      "end": {
+        "id": "Postgres"
+      },
+      "boundElements": [
+        {
+          "id": "lbl_IngestDAG_Postgres",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "lbl_IngestDAG_Postgres",
+      "type": "text",
+      "x": 167.547,
+      "y": 305.5,
+      "width": 160,
       "height": 25,
       "angle": 0,
       "strokeColor": "#1e1e1e",
@@ -491,25 +559,25 @@
       "versionNonce": 1899829,
       "isDeleted": false,
       "boundElements": null,
-      "updated": 1773875262196,
+      "updated": 1773884445625,
       "link": null,
       "locked": false,
-      "text": "Slack",
+      "text": "raw responses",
       "fontSize": 20,
       "fontFamily": 1,
       "textAlign": "center",
       "verticalAlign": "middle",
-      "containerId": "Slack",
-      "originalText": "Slack",
-      "rawText": "Slack",
+      "containerId": "IngestDAG_Postgres",
+      "originalText": "raw responses",
+      "rawText": "raw responses",
       "lineHeight": 1.25
     },
     {
-      "id": "OddsAPI_Ingest",
+      "id": "IngestDAG_TransformDAG",
       "type": "arrow",
       "groupIds": [],
-      "x": 225.131,
-      "y": 68,
+      "x": 353.596,
+      "y": 208,
       "strokeWidth": 2,
       "points": [
         [
@@ -517,40 +585,36 @@
           0
         ],
         [
-          -77.64699999999999,
-          55
+          93.62299999999999,
+          40
         ],
         [
-          -77.64699999999999,
-          110
-        ],
-        [
-          -77.64699999999999,
-          131
+          93.62299999999999,
+          76
         ]
       ],
       "roundness": {
         "type": 2
       },
       "start": {
-        "id": "OddsAPI"
+        "id": "IngestDAG"
       },
       "end": {
-        "id": "Ingest"
+        "id": "TransformDAG"
       },
       "boundElements": [
         {
-          "id": "lbl_OddsAPI_Ingest",
+          "id": "lbl_IngestDAG_TransformDAG",
           "type": "text"
         }
       ]
     },
     {
-      "id": "lbl_OddsAPI_Ingest",
+      "id": "lbl_IngestDAG_TransformDAG",
       "type": "text",
-      "x": 47.48400000000001,
-      "y": 163.5,
-      "width": 200,
+      "x": 367.219,
+      "y": 235.5,
+      "width": 160,
       "height": 25,
       "angle": 0,
       "strokeColor": "#1e1e1e",
@@ -568,25 +632,25 @@
       "versionNonce": 2099811,
       "isDeleted": false,
       "boundElements": null,
-      "updated": 1773875262196,
+      "updated": 1773884445625,
       "link": null,
       "locked": false,
-      "text": "Fetch events, odds, scores",
+      "text": "triggers",
       "fontSize": 20,
       "fontFamily": 1,
       "textAlign": "center",
       "verticalAlign": "middle",
-      "containerId": "OddsAPI_Ingest",
-      "originalText": "Fetch events, odds, scores",
-      "rawText": "Fetch events, odds, scores",
+      "containerId": "IngestDAG_TransformDAG",
+      "originalText": "triggers",
+      "rawText": "triggers",
       "lineHeight": 1.25
     },
     {
-      "id": "Ingest_Raw",
+      "id": "Postgres_PlayerPropsDAG",
       "type": "arrow",
       "groupIds": [],
-      "x": 251.969,
-      "y": 270.933,
+      "x": 321.238,
+      "y": 486.339,
       "strokeWidth": 2,
       "points": [
         [
@@ -594,40 +658,36 @@
           0
         ],
         [
-          282.781,
-          62.06700000000001
+          -107.88999999999999,
+          64.00299999999999
         ],
         [
-          282.781,
-          102.06700000000001
-        ],
-        [
-          592.19,
-          166.63299999999998
+          -107.88999999999999,
+          100.00299999999999
         ]
       ],
       "roundness": {
         "type": 2
       },
       "start": {
-        "id": "Ingest"
+        "id": "Postgres"
       },
       "end": {
-        "id": "Raw"
+        "id": "PlayerPropsDAG"
       },
       "boundElements": [
         {
-          "id": "lbl_Ingest_Raw",
+          "id": "lbl_Postgres_PlayerPropsDAG",
           "type": "text"
         }
       ]
     },
     {
-      "id": "lbl_Ingest_Raw",
+      "id": "lbl_Postgres_PlayerPropsDAG",
       "type": "text",
-      "x": 434.75,
-      "y": 358.5,
-      "width": 200,
+      "x": 133.348,
+      "y": 537.842,
+      "width": 160,
       "height": 25,
       "angle": 0,
       "strokeColor": "#1e1e1e",
@@ -645,25 +705,25 @@
       "versionNonce": 2299793,
       "isDeleted": false,
       "boundElements": null,
-      "updated": 1773875262196,
+      "updated": 1773884445625,
       "link": null,
       "locked": false,
-      "text": "Store raw JSON",
+      "text": "game IDs",
       "fontSize": 20,
       "fontFamily": 1,
       "textAlign": "center",
       "verticalAlign": "middle",
-      "containerId": "Ingest_Raw",
-      "originalText": "Store raw JSON",
-      "rawText": "Store raw JSON",
+      "containerId": "Postgres_PlayerPropsDAG",
+      "originalText": "game IDs",
+      "rawText": "game IDs",
       "lineHeight": 1.25
     },
     {
-      "id": "Raw_Transform",
+      "id": "TransformDAG_Postgres",
       "type": "arrow",
       "groupIds": [],
-      "x": 891.26,
-      "y": 515.694,
+      "x": 447.219,
+      "y": 348,
       "strokeWidth": 2,
       "points": [
         [
@@ -671,36 +731,36 @@
           0
         ],
         [
-          -46.74400000000003,
-          57.39600000000007
+          0,
+          40
         ],
         [
-          -240.438,
-          119.92500000000007
+          -29.13299999999998,
+          78.64999999999998
         ]
       ],
       "roundness": {
         "type": 2
       },
       "start": {
-        "id": "Raw"
+        "id": "TransformDAG"
       },
       "end": {
-        "id": "Transform"
+        "id": "Postgres"
       },
       "boundElements": [
         {
-          "id": "lbl_Raw_Transform",
+          "id": "lbl_TransformDAG_Postgres",
           "type": "text"
         }
       ]
     },
     {
-      "id": "lbl_Raw_Transform",
+      "id": "lbl_TransformDAG_Postgres",
       "type": "text",
-      "x": 744.516,
-      "y": 558.59,
-      "width": 200,
+      "x": 367.219,
+      "y": 375.5,
+      "width": 160,
       "height": 25,
       "angle": 0,
       "strokeColor": "#1e1e1e",
@@ -718,25 +778,25 @@
       "versionNonce": 2499775,
       "isDeleted": false,
       "boundElements": null,
-      "updated": 1773875262196,
+      "updated": 1773884445625,
       "link": null,
       "locked": false,
-      "text": "Read latest response",
+      "text": "structured tables",
       "fontSize": 20,
       "fontFamily": 1,
       "textAlign": "center",
       "verticalAlign": "middle",
-      "containerId": "Raw_Transform",
-      "originalText": "Read latest response",
-      "rawText": "Read latest response",
+      "containerId": "TransformDAG_Postgres",
+      "originalText": "structured tables",
+      "rawText": "structured tables",
       "lineHeight": 1.25
     },
     {
-      "id": "Transform_Normalized",
+      "id": "PlayerPropsDAG_Postgres",
       "type": "arrow",
       "groupIds": [],
-      "x": 534.75,
-      "y": 718.09,
+      "x": 309.137,
+      "y": 590.342,
       "strokeWidth": 2,
       "points": [
         [
@@ -744,36 +804,36 @@
           0
         ],
         [
-          0,
-          55
+          127.71800000000002,
+          -40
         ],
         [
-          198.582,
-          139.11699999999996
+          103.44299999999998,
+          -77.89499999999998
         ]
       ],
       "roundness": {
         "type": 2
       },
       "start": {
-        "id": "Transform"
+        "id": "PlayerPropsDAG"
       },
       "end": {
-        "id": "Normalized"
+        "id": "Postgres"
       },
       "boundElements": [
         {
-          "id": "lbl_Transform_Normalized",
+          "id": "lbl_PlayerPropsDAG_Postgres",
           "type": "text"
         }
       ]
     },
     {
-      "id": "lbl_Transform_Normalized",
+      "id": "lbl_PlayerPropsDAG_Postgres",
       "type": "text",
-      "x": 434.75,
-      "y": 758.59,
-      "width": 200,
+      "x": 356.855,
+      "y": 537.842,
+      "width": 160,
       "height": 25,
       "angle": 0,
       "strokeColor": "#1e1e1e",
@@ -791,25 +851,25 @@
       "versionNonce": 2699757,
       "isDeleted": false,
       "boundElements": null,
-      "updated": 1773875262196,
+      "updated": 1773884445625,
       "link": null,
       "locked": false,
-      "text": "Write structured rows",
+      "text": "prop odds",
       "fontSize": 20,
       "fontFamily": 1,
       "textAlign": "center",
       "verticalAlign": "middle",
-      "containerId": "Transform_Normalized",
-      "originalText": "Write structured rows",
-      "rawText": "Write structured rows",
+      "containerId": "PlayerPropsDAG_Postgres",
+      "originalText": "prop odds",
+      "rawText": "prop odds",
       "lineHeight": 1.25
     },
     {
-      "id": "Normalized_PlayerProps",
+      "id": "IngestDAG_Slack",
       "type": "arrow",
       "groupIds": [],
-      "x": 844.516,
-      "y": 980.516,
+      "x": 178.895,
+      "y": 207.148,
       "strokeWidth": 2,
       "points": [
         [
@@ -817,40 +877,60 @@
           0
         ],
         [
-          0,
-          25
+          -146.442,
+          40.852000000000004
         ],
         [
-          -577.0319999999999,
-          80.00000000000011
+          -146.442,
+          110.852
         ],
         [
-          -514.105,
-          132.43899999999996
+          -146.442,
+          180.852
+        ],
+        [
+          -146.442,
+          262.023
+        ],
+        [
+          -146.442,
+          343.19399999999996
+        ],
+        [
+          -146.442,
+          413.19399999999996
+        ],
+        [
+          -146.442,
+          483.19399999999996
+        ],
+        [
+          -107.42300000000002,
+          520.433
         ]
       ],
       "roundness": {
         "type": 2
       },
       "start": {
-        "id": "Normalized"
+        "id": "IngestDAG"
       },
       "end": {
-        "id": "PlayerProps"
+        "id": "Slack"
       },
       "boundElements": [
         {
-          "id": "lbl_Normalized_PlayerProps",
+          "id": "lbl_IngestDAG_Slack",
           "type": "text"
         }
       ]
     },
     {
-      "id": "lbl_Normalized_PlayerProps",
+      "id": "lbl_IngestDAG_Slack",
       "type": "text",
-      "x": 167.48400000000004,
-      "y": 1046.016,
-      "width": 200,
+      "x": -47.547,
+      "y": 456.67100000000005,
+      "width": 160,
       "height": 25,
       "angle": 0,
       "strokeColor": "#1e1e1e",
@@ -868,25 +948,25 @@
       "versionNonce": 2899739,
       "isDeleted": false,
       "boundElements": null,
-      "updated": 1773875262196,
+      "updated": 1773884445625,
       "link": null,
       "locked": false,
-      "text": "Look up upcoming game IDs",
+      "text": "alerts",
       "fontSize": 20,
       "fontFamily": 1,
       "textAlign": "center",
       "verticalAlign": "middle",
-      "containerId": "Normalized_PlayerProps",
-      "originalText": "Look up upcoming game IDs",
-      "rawText": "Look up upcoming game IDs",
+      "containerId": "IngestDAG_Slack",
+      "originalText": "alerts",
+      "rawText": "alerts",
       "lineHeight": 1.25
     },
     {
-      "id": "OddsAPI_PlayerProps",
+      "id": "PlayerPropsDAG_Slack",
       "type": "arrow",
       "groupIds": [],
-      "x": 309.837,
-      "y": 68,
+      "x": 213.348,
+      "y": 650.342,
       "strokeWidth": 2,
       "points": [
         [
@@ -894,80 +974,36 @@
           0
         ],
         [
-          77.64699999999999,
-          55
+          0,
+          40
         ],
         [
-          77.64699999999999,
-          110
-        ],
-        [
-          77.64699999999999,
-          180
-        ],
-        [
-          77.64699999999999,
-          265
-        ],
-        [
-          77.64699999999999,
-          305
-        ],
-        [
-          77.64699999999999,
-          390.045
-        ],
-        [
-          77.64699999999999,
-          505.09000000000003
-        ],
-        [
-          77.64699999999999,
-          605.09
-        ],
-        [
-          77.64699999999999,
-          705.09
-        ],
-        [
-          77.64699999999999,
-          836.303
-        ],
-        [
-          77.64699999999999,
-          937.516
-        ],
-        [
-          77.64699999999999,
-          992.5160000000001
-        ],
-        [
-          77.64699999999999,
-          1043.516
+          -58.10300000000001,
+          77.81799999999998
         ]
       ],
       "roundness": {
         "type": 2
       },
       "start": {
-        "id": "OddsAPI"
+        "id": "PlayerPropsDAG"
       },
       "end": {
-        "id": "PlayerProps"
+        "id": "Slack"
       },
       "boundElements": [
         {
-          "id": "lbl_OddsAPI_PlayerProps",
+          "id": "lbl_PlayerPropsDAG_Slack",
           "type": "text"
         }
       ]
     },
     {
-      "id": "lbl_OddsAPI_PlayerProps",
+      "id": "lbl_PlayerPropsDAG_Slack",
       "type": "text",
-      "x": 287.484,
-      "y": 558.59,
-      "width": 200,
+      "x": 133.348,
+      "y": 677.842,
+      "width": 160,
       "height": 25,
       "angle": 0,
       "strokeColor": "#1e1e1e",
@@ -985,284 +1021,17 @@
       "versionNonce": 3099721,
       "isDeleted": false,
       "boundElements": null,
-      "updated": 1773875262196,
+      "updated": 1773884445625,
       "link": null,
       "locked": false,
-      "text": "Fetch player props per game",
+      "text": "alerts",
       "fontSize": 20,
       "fontFamily": 1,
       "textAlign": "center",
       "verticalAlign": "middle",
-      "containerId": "OddsAPI_PlayerProps",
-      "originalText": "Fetch player props per game",
-      "rawText": "Fetch player props per game",
-      "lineHeight": 1.25
-    },
-    {
-      "id": "PlayerProps_DB",
-      "type": "arrow",
-      "groupIds": [],
-      "x": 453.754,
-      "y": 1115.516,
-      "strokeWidth": 2,
-      "points": [
-        [
-          0,
-          0
-        ],
-        [
-          80.99599999999998,
-          -55
-        ],
-        [
-          529.2909999999999,
-          -109.51700000000005
-        ]
-      ],
-      "roundness": {
-        "type": 2
-      },
-      "start": {
-        "id": "PlayerProps"
-      },
-      "end": {
-        "id": "DB"
-      },
-      "boundElements": [
-        {
-          "id": "lbl_PlayerProps_DB",
-          "type": "text"
-        }
-      ]
-    },
-    {
-      "id": "lbl_PlayerProps_DB",
-      "type": "text",
-      "x": 434.75,
-      "y": 1046.016,
-      "width": 200,
-      "height": 25,
-      "angle": 0,
-      "strokeColor": "#1e1e1e",
-      "backgroundColor": "transparent",
-      "fillStyle": "solid",
-      "strokeWidth": 1,
-      "strokeStyle": "solid",
-      "roughness": 1,
-      "opacity": 100,
-      "groupIds": [],
-      "frameId": null,
-      "roundness": null,
-      "seed": 3199712,
-      "version": 1,
-      "versionNonce": 3299703,
-      "isDeleted": false,
-      "boundElements": null,
-      "updated": 1773875262196,
-      "link": null,
-      "locked": false,
-      "text": "Store raw + normalized props",
-      "fontSize": 20,
-      "fontFamily": 1,
-      "textAlign": "center",
-      "verticalAlign": "middle",
-      "containerId": "PlayerProps_DB",
-      "originalText": "Store raw + normalized props",
-      "rawText": "Store raw + normalized props",
-      "lineHeight": 1.25
-    },
-    {
-      "id": "Ingest_Slack",
-      "type": "arrow",
-      "groupIds": [],
-      "x": 147.484,
-      "y": 293,
-      "strokeWidth": 2,
-      "points": [
-        [
-          0,
-          0
-        ],
-        [
-          0,
-          40
-        ],
-        [
-          0,
-          80
-        ],
-        [
-          0,
-          165.04500000000002
-        ],
-        [
-          0,
-          280.09000000000003
-        ],
-        [
-          0,
-          380.09000000000003
-        ],
-        [
-          0,
-          480.09000000000003
-        ],
-        [
-          0,
-          611.303
-        ],
-        [
-          0,
-          712.516
-        ],
-        [
-          0,
-          767.5160000000001
-        ],
-        [
-          0,
-          867.5160000000001
-        ],
-        [
-          0,
-          937.5160000000001
-        ],
-        [
-          0,
-          977.5160000000001
-        ],
-        [
-          65.11699999999999,
-          1015.501
-        ]
-      ],
-      "roundness": {
-        "type": 2
-      },
-      "start": {
-        "id": "Ingest"
-      },
-      "end": {
-        "id": "Slack"
-      },
-      "boundElements": [
-        {
-          "id": "lbl_Ingest_Slack",
-          "type": "text"
-        }
-      ]
-    },
-    {
-      "id": "lbl_Ingest_Slack",
-      "type": "text",
-      "x": 47.48400000000001,
-      "y": 889.803,
-      "width": 200,
-      "height": 25,
-      "angle": 0,
-      "strokeColor": "#1e1e1e",
-      "backgroundColor": "transparent",
-      "fillStyle": "solid",
-      "strokeWidth": 1,
-      "strokeStyle": "solid",
-      "roughness": 1,
-      "opacity": 100,
-      "groupIds": [],
-      "frameId": null,
-      "roundness": null,
-      "seed": 3399694,
-      "version": 1,
-      "versionNonce": 3499685,
-      "isDeleted": false,
-      "boundElements": null,
-      "updated": 1773875262196,
-      "link": null,
-      "locked": false,
-      "text": "Success / failure alert",
-      "fontSize": 20,
-      "fontFamily": 1,
-      "textAlign": "center",
-      "verticalAlign": "middle",
-      "containerId": "Ingest_Slack",
-      "originalText": "Success / failure alert",
-      "rawText": "Success / failure alert",
-      "lineHeight": 1.25
-    },
-    {
-      "id": "PlayerProps_Slack",
-      "type": "arrow",
-      "groupIds": [],
-      "x": 387.484,
-      "y": 1205.516,
-      "strokeWidth": 2,
-      "points": [
-        [
-          0,
-          0
-        ],
-        [
-          0,
-          25
-        ],
-        [
-          0,
-          65
-        ],
-        [
-          -65.11599999999999,
-          102.9849999999999
-        ]
-      ],
-      "roundness": {
-        "type": 2
-      },
-      "start": {
-        "id": "PlayerProps"
-      },
-      "end": {
-        "id": "Slack"
-      },
-      "boundElements": [
-        {
-          "id": "lbl_PlayerProps_Slack",
-          "type": "text"
-        }
-      ]
-    },
-    {
-      "id": "lbl_PlayerProps_Slack",
-      "type": "text",
-      "x": 287.484,
-      "y": 1256.016,
-      "width": 200,
-      "height": 25,
-      "angle": 0,
-      "strokeColor": "#1e1e1e",
-      "backgroundColor": "transparent",
-      "fillStyle": "solid",
-      "strokeWidth": 1,
-      "strokeStyle": "solid",
-      "roughness": 1,
-      "opacity": 100,
-      "groupIds": [],
-      "frameId": null,
-      "roundness": null,
-      "seed": 3599676,
-      "version": 1,
-      "versionNonce": 3699667,
-      "isDeleted": false,
-      "boundElements": null,
-      "updated": 1773875262196,
-      "link": null,
-      "locked": false,
-      "text": "Success / failure alert",
-      "fontSize": 20,
-      "fontFamily": 1,
-      "textAlign": "center",
-      "verticalAlign": "middle",
-      "containerId": "PlayerProps_Slack",
-      "originalText": "Success / failure alert",
-      "rawText": "Success / failure alert",
+      "containerId": "PlayerPropsDAG_Slack",
+      "originalText": "alerts",
+      "rawText": "alerts",
       "lineHeight": 1.25
     }
   ],
