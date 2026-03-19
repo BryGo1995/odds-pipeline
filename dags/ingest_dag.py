@@ -1,7 +1,9 @@
 # dags/ingest_dag.py
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import timedelta
+
+import pendulum
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
@@ -60,8 +62,8 @@ with DAG(
     dag_id="nba_ingest",
     default_args=default_args,
     description="Fetch NBA data from Odds-API and store raw JSON",
-    schedule_interval="0 8,20 * * *",  # 8am and 8pm daily
-    start_date=datetime(2024, 1, 1),
+    schedule_interval="0 8,16 * * *",  # 8am and 4pm MT
+    start_date=pendulum.datetime(2024, 1, 1, tz="America/Denver"),
     catchup=False,
     tags=["nba", "ingest"],
     on_success_callback=notify_success,

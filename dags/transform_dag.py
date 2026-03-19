@@ -1,6 +1,8 @@
 # dags/transform_dag.py
 import sys
-from datetime import datetime, timedelta
+from datetime import timedelta
+
+import pendulum
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
@@ -65,8 +67,8 @@ with DAG(
     dag_id="nba_transform",
     default_args=default_args,
     description="Normalize raw NBA Odds-API data into structured tables",
-    schedule_interval="15 8,20 * * *",  # 15 min after ingest
-    start_date=datetime(2024, 1, 1),
+    schedule_interval="15 8,16 * * *",  # 15 min after ingest (8:15am and 4:15pm MT)
+    start_date=pendulum.datetime(2024, 1, 1, tz="America/Denver"),
     catchup=False,
     tags=["nba", "transform"],
 ) as dag:
