@@ -83,4 +83,4 @@ with DAG(
     t_odds   = PythonOperator(task_id="transform_odds",   python_callable=run_transform_odds)
     t_scores = PythonOperator(task_id="transform_scores", python_callable=run_transform_scores)
 
-    wait_for_ingest >> [t_events, t_odds, t_scores]
+    wait_for_ingest >> t_events >> [t_odds, t_scores]
