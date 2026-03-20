@@ -107,6 +107,22 @@ services:
     depends_on:
       - data-postgres
 
+  odds-admin:
+    build:
+      context: ../odds-admin
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      - DATA_DB_HOST=data-postgres
+      - DATA_DB_PORT=5432
+      - DATA_DB_USER=${DATA_DB_USER:-odds}
+      - DATA_DB_PASSWORD=${DATA_DB_PASSWORD:-odds_password}
+      - DATA_DB_NAME=${DATA_DB_NAME:-odds_db}
+    depends_on:
+      data-postgres:
+        condition: service_healthy
+
   postgres_exporter_data:
     image: prometheuscommunity/postgres-exporter:v0.15.0
     hostname: odds-pipeline-postgres-data
