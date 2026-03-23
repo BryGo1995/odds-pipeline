@@ -113,3 +113,32 @@ def test_fetch_player_game_logs_retries_on_429():
         result = fetch_player_game_logs(season="2024-25", delay_seconds=0)
     mock_sleep.assert_any_call(30)
     assert len(result) == 1
+
+
+def test_fetch_player_game_logs_task_bootstrap_fetches_all_players():
+    """When player_name_mappings and player_game_logs are both empty, all players are fetched."""
+    import sys
+    sys.path.insert(0, ".")
+    from unittest.mock import MagicMock, patch
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    # Both queries return empty — bootstrap mode
+    mock_cursor.fetchall.side_effect = [[], []]
+
+    fake_logs = [
+        {"player_id": 1, "nba_game_id": "G1", "season": "2024-25", "game_date": "2025-01-01",
+         "matchup": "A vs. B", "team_id": 1, "wl": "W", "min": 30.0, "fga": 8, "fta": 2,
+         "usg_pct": 0.22, "pts": 15, "reb": 4, "ast": 3, "blk": 0, "stl": 1, "plus_minus": 5},
+    ]
+
+    with patch("dags.nba_player_stats_ingest_dag.get_data_db_conn", return_value=mock_conn), \
+         patch("dags.nba_player_stats_ingest_dag.fetch_player_game_logs", return_value=fake_logs) as mock_fetch, \
+         patch("dags.nba_player_stats_ingest_dag.store_raw_response"):
+        from dags.nba_player_stats_ingest_dag import fetch_player_game_logs_task
+        fetch_player_game_logs_task(ti=MagicMock())
+
+    # In bootstrap mode (player_ids is empty set), no filtering occurs — all rows are stored
+    mock_fetch.assert_called_once()
