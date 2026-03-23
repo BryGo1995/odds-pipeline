@@ -1,5 +1,4 @@
 # dags/nba_player_stats_ingest_dag.py
-import json
 import os
 import sys
 from datetime import timedelta

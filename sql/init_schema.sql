@@ -88,7 +88,6 @@ CREATE TABLE IF NOT EXISTS player_game_logs (
     game_date        DATE NOT NULL,
     matchup          TEXT,
     team_id          INT,
-    opponent_team_id INT,
     wl               TEXT,
     min              FLOAT,
     fga              INT,
