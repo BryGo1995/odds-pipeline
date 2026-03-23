@@ -64,3 +64,14 @@ def _post(text):
         response.raise_for_status()
     except Exception as exc:
         logger.warning("Failed to post Slack notification: %s", exc)
+
+
+def send_slack_message(webhook_url, text):
+    """Send a message to Slack via the provided webhook URL."""
+    if not webhook_url:
+        return
+    try:
+        response = requests.post(webhook_url, json={"text": text})
+        response.raise_for_status()
+    except Exception as exc:
+        logger.warning("Failed to post Slack notification: %s", exc)
