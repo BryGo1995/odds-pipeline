@@ -24,3 +24,16 @@ def _stub_airflow():
 
 
 _stub_airflow()
+
+
+def _stub_nba_api():
+    """Stub nba_api so unit tests don't require the package to be installed."""
+    if "nba_api" in sys.modules:
+        return
+    nba_api_stub = MagicMock()
+    sys.modules.setdefault("nba_api", nba_api_stub)
+    sys.modules.setdefault("nba_api.stats", nba_api_stub)
+    sys.modules.setdefault("nba_api.stats.endpoints", nba_api_stub)
+
+
+_stub_nba_api()
