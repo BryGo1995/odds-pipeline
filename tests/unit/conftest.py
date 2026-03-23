@@ -16,11 +16,16 @@ def _stub_airflow():
 
     airflow_stub = MagicMock()
     airflow_models_stub = MagicMock()
+    airflow_models_param_stub = MagicMock()
+    airflow_sensors_stub = MagicMock()
 
     sys.modules.setdefault("airflow", airflow_stub)
     sys.modules.setdefault("airflow.models", airflow_models_stub)
+    sys.modules.setdefault("airflow.models.param", airflow_models_param_stub)
     sys.modules.setdefault("airflow.operators", MagicMock())
     sys.modules.setdefault("airflow.operators.python", MagicMock())
+    sys.modules.setdefault("airflow.sensors", airflow_sensors_stub)
+    sys.modules.setdefault("airflow.sensors.external_task", MagicMock())
 
 
 _stub_airflow()
@@ -36,4 +41,15 @@ def _stub_nba_api():
     sys.modules.setdefault("nba_api.stats.endpoints", nba_api_stub)
 
 
+def _stub_pendulum():
+    """Stub pendulum so DAGs can be imported without it being installed."""
+    if "pendulum" in sys.modules:
+        return
+    pendulum_stub = MagicMock()
+    # Mock the datetime function to return a MagicMock that behaves like a datetime
+    pendulum_stub.datetime = MagicMock(return_value=MagicMock())
+    sys.modules.setdefault("pendulum", pendulum_stub)
+
+
 _stub_nba_api()
+_stub_pendulum()
