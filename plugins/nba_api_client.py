@@ -116,14 +116,14 @@ def fetch_team_season_stats(season, delay_seconds=1):
     adv_result = _call_with_retry(
         LeagueDashTeamStats, delay_seconds,
         season=season,
-        measure_type_simple="Advanced",
-        per_mode_simple="PerGame",
+        measure_type_detailed_defense="Advanced",
+        per_mode_detailed="PerGame",
     )
     opp_result = _call_with_retry(
         LeagueDashTeamStats, delay_seconds,
         season=season,
-        measure_type_simple="Opponent",
-        per_mode_simple="PerGame",
+        measure_type_detailed_defense="Opponent",
+        per_mode_detailed="PerGame",
     )
     adv_df = adv_result.get_data_frames()[0][["TEAM_ID", "TEAM_ABBREVIATION", "PACE", "OFF_RATING", "DEF_RATING"]]
     opp_df = opp_result.get_data_frames()[0][["TEAM_ID", "OPP_PTS_PAINT"]]
