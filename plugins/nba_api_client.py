@@ -8,8 +8,12 @@ from nba_api.stats.endpoints import (
     LeagueGameLog,
     LeagueDashTeamStats,
 )
+from nba_api.stats.library.http import STATS_HEADERS
 
-_DEFAULT_TIMEOUT = 60
+# stats.nba.com requires Origin to be set or it hangs connections from non-browser clients
+STATS_HEADERS["Origin"] = "https://www.nba.com"
+
+_DEFAULT_TIMEOUT = 120
 
 
 def _call_with_retry(endpoint_cls, delay_seconds, **kwargs):
