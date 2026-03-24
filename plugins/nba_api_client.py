@@ -1,4 +1,5 @@
 # plugins/nba_api_client.py
+import json
 import time
 
 import requests
@@ -22,7 +23,7 @@ _DEFAULT_TIMEOUT = 120
 
 
 def _call_with_retry(endpoint_cls, delay_seconds, **kwargs):
-    """Call an nba_api endpoint class, retrying once on HTTP 429."""
+    """Call an nba_api endpoint class, retrying on HTTP 429 or empty-body responses."""
     time.sleep(delay_seconds)
     try:
         return endpoint_cls(timeout=_DEFAULT_TIMEOUT, **kwargs)
@@ -31,6 +32,10 @@ def _call_with_retry(endpoint_cls, delay_seconds, **kwargs):
             time.sleep(30)
             return endpoint_cls(timeout=_DEFAULT_TIMEOUT, **kwargs)
         raise
+    except json.JSONDecodeError:
+        # Akamai CDN occasionally returns an empty body (silent block); wait and retry once
+        time.sleep(30)
+        return endpoint_cls(timeout=_DEFAULT_TIMEOUT, **kwargs)
 
 
 def fetch_players(delay_seconds=1):
