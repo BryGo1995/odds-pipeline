@@ -44,7 +44,7 @@ def fetch_players(delay_seconds=1):
             "full_name": row["DISPLAY_FIRST_LAST"],
             "team_id": int(row["TEAM_ID"]) if row["TEAM_ID"] else None,
             "team_abbreviation": row["TEAM_ABBREVIATION"] or None,
-            "position": row["POSITION"] or None,
+            "position": row.get("POSITION") or None,
             "is_active": True,
         }
         for _, row in active.iterrows()
