@@ -10,8 +10,13 @@ from nba_api.stats.endpoints import (
 )
 from nba_api.stats.library.http import STATS_HEADERS
 
-# stats.nba.com requires Origin to be set or it hangs connections from non-browser clients
+# stats.nba.com (Akamai CDN) requires browser-like headers including Sec-Fetch-* to avoid silent drops
 STATS_HEADERS["Origin"] = "https://www.nba.com"
+STATS_HEADERS["Referer"] = "https://www.nba.com/"
+STATS_HEADERS["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+STATS_HEADERS["Sec-Fetch-Site"] = "same-site"
+STATS_HEADERS["Sec-Fetch-Mode"] = "cors"
+STATS_HEADERS["Sec-Fetch-Dest"] = "empty"
 
 _DEFAULT_TIMEOUT = 120
 
