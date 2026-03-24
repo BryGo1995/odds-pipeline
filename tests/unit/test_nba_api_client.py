@@ -133,6 +133,36 @@ def test_fetch_player_game_logs_retries_on_429():
     assert len(result) == 1
 
 
+def test_fetch_player_game_logs_includes_extended_stat_columns():
+    from plugins.nba_api_client import fetch_player_game_logs
+    base_df = pd.DataFrame([{
+        "PLAYER_ID": 2544, "PLAYER_NAME": "LeBron James", "GAME_ID": "0022400001",
+        "GAME_DATE": "2025-01-15", "MATCHUP": "LAL vs. DEN", "TEAM_ID": 1610612747,
+        "WL": "W", "MIN": 34.5,
+        "FGM": 11, "FGA": 14, "FG_PCT": 0.786,
+        "FG3M": 2,  "FG3A": 5,  "FG3_PCT": 0.4,
+        "FTM": 4,   "FTA": 6,   "FT_PCT": 0.667,
+        "PTS": 28, "REB": 8, "OREB": 1, "DREB": 7,
+        "AST": 10, "BLK": 1, "STL": 2, "TOV": 3, "PF": 2, "PLUS_MINUS": 12,
+    }])
+    adv_df = pd.DataFrame([{"PLAYER_ID": 2544, "GAME_ID": "0022400001", "USG_PCT": 0.312}])
+    with patch("plugins.nba_api_client.PlayerGameLogs") as mock_cls:
+        mock_cls.side_effect = [_mock_endpoint(base_df), _mock_endpoint(adv_df)]
+        result = fetch_player_game_logs(season="2024-25", delay_seconds=0)
+    row = result[0]
+    assert row["fgm"] == 11
+    assert row["fg_pct"] == pytest.approx(0.786)
+    assert row["fg3m"] == 2
+    assert row["fg3a"] == 5
+    assert row["fg3_pct"] == pytest.approx(0.4)
+    assert row["ftm"] == 4
+    assert row["ft_pct"] == pytest.approx(0.667)
+    assert row["oreb"] == 1
+    assert row["dreb"] == 7
+    assert row["tov"] == 3
+    assert row["pf"] == 2
+
+
 def test_fetch_player_game_logs_task_bootstrap_fetches_all_players():
     """When player_name_mappings and player_game_logs are both empty, all players are fetched."""
     import sys
@@ -152,10 +182,10 @@ def test_fetch_player_game_logs_task_bootstrap_fetches_all_players():
          "usg_pct": 0.22, "pts": 15, "reb": 4, "ast": 3, "blk": 0, "stl": 1, "plus_minus": 5},
     ]
 
-    with patch("dags.nba_player_stats_ingest_dag.get_data_db_conn", return_value=mock_conn), \
-         patch("dags.nba_player_stats_ingest_dag.fetch_player_game_logs", return_value=fake_logs) as mock_fetch, \
-         patch("dags.nba_player_stats_ingest_dag.store_raw_response"):
-        from dags.nba_player_stats_ingest_dag import fetch_player_game_logs_task
+    with patch("dags.nba_stats_pipeline_dag.get_data_db_conn", return_value=mock_conn), \
+         patch("dags.nba_stats_pipeline_dag.fetch_player_game_logs", return_value=fake_logs) as mock_fetch, \
+         patch("dags.nba_stats_pipeline_dag.store_raw_response"):
+        from dags.nba_stats_pipeline_dag import fetch_player_game_logs_task
         fetch_player_game_logs_task(ti=MagicMock())
 
     # In bootstrap mode (player_ids is empty set), no filtering occurs — all rows are stored

@@ -1,4 +1,4 @@
-# dags/nba_player_stats_backfill_dag.py
+# dags/nba_stats_backfill_dag.py
 import re
 import sys
 import time
@@ -92,7 +92,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id="nba_player_stats_backfill",
+    dag_id="nba_stats_backfill",
     default_args=default_args,
     description="Historical NBA player stats seed (manual trigger)",
     schedule_interval=None,
