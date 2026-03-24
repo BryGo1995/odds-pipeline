@@ -23,19 +23,26 @@ _DEFAULT_TIMEOUT = 120
 
 
 def _call_with_retry(endpoint_cls, delay_seconds, **kwargs):
-    """Call an nba_api endpoint class, retrying on HTTP 429 or empty-body responses."""
+    """Call an nba_api endpoint class with up to 3 attempts, backing off on 429 or empty responses."""
+    retry_delays = [30, 60, 120]
     time.sleep(delay_seconds)
-    try:
-        return endpoint_cls(timeout=_DEFAULT_TIMEOUT, **kwargs)
-    except requests.exceptions.HTTPError as e:
-        if hasattr(e, "response") and e.response is not None and e.response.status_code == 429:
-            time.sleep(30)
+    for attempt, backoff in enumerate(retry_delays, start=1):
+        try:
             return endpoint_cls(timeout=_DEFAULT_TIMEOUT, **kwargs)
-        raise
-    except json.JSONDecodeError:
-        # Akamai CDN occasionally returns an empty body (silent block); wait and retry once
-        time.sleep(30)
-        return endpoint_cls(timeout=_DEFAULT_TIMEOUT, **kwargs)
+        except requests.exceptions.HTTPError as e:
+            if hasattr(e, "response") and e.response is not None and e.response.status_code == 429:
+                if attempt == len(retry_delays):
+                    raise
+                time.sleep(backoff)
+            else:
+                raise
+        except json.JSONDecodeError:
+            # Akamai CDN occasionally returns an empty body (silent block)
+            if attempt == len(retry_delays):
+                raise
+            time.sleep(backoff)
+    # unreachable, but satisfies type checkers
+    return endpoint_cls(timeout=_DEFAULT_TIMEOUT, **kwargs)
 
 
 def fetch_players(delay_seconds=1):

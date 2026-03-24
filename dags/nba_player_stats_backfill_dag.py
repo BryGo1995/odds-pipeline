@@ -23,7 +23,7 @@ from plugins.transformers.team_game_logs import transform_team_game_logs
 from plugins.transformers.team_season_stats import transform_team_season_stats
 from plugins.transformers.game_id_linker import link_nba_game_ids
 
-BACKFILL_DELAY_SECONDS = 2.5
+BACKFILL_DELAY_SECONDS = 5
 SEASON_PATTERN = re.compile(r"^\d{4}-\d{2}$")
 
 
