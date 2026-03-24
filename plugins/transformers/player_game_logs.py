@@ -9,9 +9,20 @@ def transform_player_game_logs(conn, raw_logs):
                     """
                     INSERT INTO player_game_logs
                         (player_id, nba_game_id, season, game_date, matchup,
-                         team_id, wl, fga, min, fta, usg_pct,
-                         pts, reb, ast, blk, stl, plus_minus)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                         team_id, wl, min,
+                         fgm, fga, fg_pct,
+                         fg3m, fg3a, fg3_pct,
+                         ftm, fta, ft_pct,
+                         usg_pct,
+                         pts, reb, oreb, dreb,
+                         ast, blk, stl, tov, pf, plus_minus)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s,
+                            %s, %s, %s,
+                            %s, %s, %s,
+                            %s, %s, %s,
+                            %s,
+                            %s, %s, %s, %s,
+                            %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (player_id, nba_game_id) DO NOTHING
                     """,
                     (
@@ -22,15 +33,26 @@ def transform_player_game_logs(conn, raw_logs):
                         log.get("matchup"),
                         log.get("team_id"),
                         log.get("wl"),
-                        log.get("fga"),
                         log.get("min"),
+                        log.get("fgm"),
+                        log.get("fga"),
+                        log.get("fg_pct"),
+                        log.get("fg3m"),
+                        log.get("fg3a"),
+                        log.get("fg3_pct"),
+                        log.get("ftm"),
                         log.get("fta"),
+                        log.get("ft_pct"),
                         log.get("usg_pct"),
                         log.get("pts"),
                         log.get("reb"),
+                        log.get("oreb"),
+                        log.get("dreb"),
                         log.get("ast"),
                         log.get("blk"),
                         log.get("stl"),
+                        log.get("tov"),
+                        log.get("pf"),
                         log.get("plus_minus"),
                     ),
                 )

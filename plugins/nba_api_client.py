@@ -9,6 +9,7 @@ from nba_api.stats.endpoints import (
     LeagueGameLog,
     LeagueDashTeamStats,
 )
+from nba_api.stats.static import teams as static_teams
 from nba_api.stats.library.http import STATS_HEADERS
 
 # stats.nba.com (Akamai CDN) requires browser-like headers including Sec-Fetch-* to avoid silent drops
@@ -43,6 +44,24 @@ def _call_with_retry(endpoint_cls, delay_seconds, **kwargs):
             time.sleep(backoff)
     # unreachable, but satisfies type checkers
     return endpoint_cls(timeout=_DEFAULT_TIMEOUT, **kwargs)
+
+
+def fetch_teams():
+    """Return NBA team metadata from the nba_api static dataset (no network call).
+
+    Returns a list of dicts with team_id, full_name, abbreviation, city, nickname.
+    Conference and division are not available from the static dataset.
+    """
+    return [
+        {
+            "team_id": t["id"],
+            "full_name": t["full_name"],
+            "abbreviation": t["abbreviation"],
+            "city": t["city"],
+            "nickname": t["nickname"],
+        }
+        for t in static_teams.get_teams()
+    ]
 
 
 def fetch_players(delay_seconds=1, is_only_current_season=1):
@@ -100,14 +119,25 @@ def fetch_player_game_logs(season, delay_seconds=1):
             "team_id": int(row["TEAM_ID"]) if row.get("TEAM_ID") else None,
             "wl": row.get("WL"),
             "min": float(row["MIN"]) if row.get("MIN") is not None else None,
+            "fgm": int(row["FGM"]) if row.get("FGM") is not None else None,
             "fga": int(row["FGA"]) if row.get("FGA") is not None else None,
+            "fg_pct": float(row["FG_PCT"]) if row.get("FG_PCT") is not None else None,
+            "fg3m": int(row["FG3M"]) if row.get("FG3M") is not None else None,
+            "fg3a": int(row["FG3A"]) if row.get("FG3A") is not None else None,
+            "fg3_pct": float(row["FG3_PCT"]) if row.get("FG3_PCT") is not None else None,
+            "ftm": int(row["FTM"]) if row.get("FTM") is not None else None,
             "fta": int(row["FTA"]) if row.get("FTA") is not None else None,
+            "ft_pct": float(row["FT_PCT"]) if row.get("FT_PCT") is not None else None,
             "usg_pct": float(row["USG_PCT"]) if row.get("USG_PCT") is not None else None,
             "pts": int(row["PTS"]) if row.get("PTS") is not None else None,
             "reb": int(row["REB"]) if row.get("REB") is not None else None,
+            "oreb": int(row["OREB"]) if row.get("OREB") is not None else None,
+            "dreb": int(row["DREB"]) if row.get("DREB") is not None else None,
             "ast": int(row["AST"]) if row.get("AST") is not None else None,
             "blk": int(row["BLK"]) if row.get("BLK") is not None else None,
             "stl": int(row["STL"]) if row.get("STL") is not None else None,
+            "tov": int(row["TOV"]) if row.get("TOV") is not None else None,
+            "pf": int(row["PF"]) if row.get("PF") is not None else None,
             "plus_minus": int(row["PLUS_MINUS"]) if row.get("PLUS_MINUS") is not None else None,
         })
     return rows

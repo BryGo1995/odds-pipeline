@@ -50,9 +50,11 @@ def test_player_props_table_exists(db_conn):
 
 
 def test_scores_table_has_unique_game_id(db_conn):
+    # game_id is now the PRIMARY KEY (migration 002 promoted it from UNIQUE);
+    # a PK implies uniqueness, so we check for PRIMARY KEY.
     cur = db_conn.cursor()
     cur.execute("""
         SELECT constraint_name FROM information_schema.table_constraints
-        WHERE table_name = 'scores' AND constraint_type = 'UNIQUE'
+        WHERE table_name = 'scores' AND constraint_type = 'PRIMARY KEY'
     """)
     assert cur.fetchone() is not None

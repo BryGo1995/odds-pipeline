@@ -41,6 +41,7 @@ def _stub_nba_api():
     sys.modules.setdefault("nba_api", nba_api_stub)
     sys.modules.setdefault("nba_api.stats", nba_api_stub)
     sys.modules.setdefault("nba_api.stats.endpoints", nba_api_stub)
+    sys.modules.setdefault("nba_api.stats.static", nba_api_stub)
     sys.modules.setdefault("nba_api.stats.library", nba_api_stub)
     sys.modules.setdefault("nba_api.stats.library.http", http_stub)
 

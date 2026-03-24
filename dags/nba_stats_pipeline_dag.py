@@ -243,6 +243,7 @@ with DAG(
         mode="reschedule",
         poke_interval=60,
         timeout=3600,
+        execution_delta=timedelta(minutes=20),
     )
 
     t_fetch_teams      = PythonOperator(task_id="fetch_teams",            python_callable=fetch_teams_task)
