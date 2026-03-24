@@ -30,12 +30,22 @@ SAMPLE_LOG = {
 }
 
 
+def _insert_call(mock_cursor):
+    """Return the execute call args for the actual INSERT (not SAVEPOINT/RELEASE)."""
+    for call in mock_cursor.execute.call_args_list:
+        sql = call[0][0]
+        if "INSERT" in sql.upper():
+            return call
+    return None
+
+
 def test_transform_player_game_logs_inserts_one_row():
     from plugins.transformers.player_game_logs import transform_player_game_logs
     mock_conn, mock_cursor = _make_mock_conn()
     transform_player_game_logs(mock_conn, [SAMPLE_LOG])
-    assert mock_cursor.execute.call_count == 1
-    args = mock_cursor.execute.call_args[0][1]
+    insert = _insert_call(mock_cursor)
+    assert insert is not None
+    args = insert[0][1]
     assert args[0] == 2544             # player_id
     assert args[1] == "0022400001"     # nba_game_id
     assert args[4] == "LAL vs. DEN"   # matchup
@@ -55,5 +65,6 @@ def test_transform_player_game_logs_uses_on_conflict():
     from plugins.transformers.player_game_logs import transform_player_game_logs
     mock_conn, mock_cursor = _make_mock_conn()
     transform_player_game_logs(mock_conn, [SAMPLE_LOG])
-    sql = mock_cursor.execute.call_args[0][0]
-    assert "ON CONFLICT" in sql.upper()
+    insert = _insert_call(mock_cursor)
+    assert insert is not None
+    assert "ON CONFLICT" in insert[0][0].upper()
