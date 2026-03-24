@@ -9,14 +9,17 @@ Fetches NBA events, odds (including player props), and scores from the [Odds-API
 ## Architecture
 
 ```
-Odds-API → nba_ingest DAG → raw_api_responses (Postgres)
-                                      ↓
-                          nba_transform DAG → games / odds / player_props / scores
+Odds-API ──► nba_odds_pipeline ──► games / odds / scores / player_props (Postgres)
+                    │
+                    │ (ExternalTaskSensor)
+                    ▼
+nba_api ────► nba_stats_pipeline ──► teams / players / game_logs / season_stats
 ```
 
-- **nba_ingest**: Fetches events, odds, and scores; stores full JSON responses (8am + 8pm daily)
-- **nba_transform**: Normalizes raw data into structured tables (runs 15 min after ingest)
-- **nba_backfill**: On-demand historical data seeding (manual trigger only)
+- **nba_odds_pipeline**: Fetches events, odds, scores, and player props from the Odds-API; transforms into structured tables in a single daily run (8am MT)
+- **nba_stats_pipeline**: Fetches and transforms NBA player/team stats from nba_api; waits for `nba_odds_pipeline` to complete before running (8:20am MT)
+- **nba_odds_backfill**: On-demand historical odds data seeding (manual trigger only)
+- **nba_stats_backfill**: On-demand historical stats data seeding (manual trigger only)
 
 ## Setup
 
@@ -63,23 +66,21 @@ In pgAdmin, connect to `data-postgres`:
 
 | DAG | Schedule | Purpose |
 |---|---|---|
-| `nba_ingest` | `0 8,20 * * *` | Fetch from Odds-API, store raw JSON |
-| `nba_transform` | `15 8,20 * * *` | Normalize raw → structured tables |
-| `nba_backfill` | Manual only | Seed historical data on demand |
+| `nba_odds_pipeline` | `0 15 * * *` (8am MT) | Fetch + transform odds, scores, and player props |
+| `nba_stats_pipeline` | `20 15 * * *` (8:20am MT) | Fetch + transform player/team stats; waits on odds pipeline |
+| `nba_odds_backfill` | Manual only | Seed historical odds data on demand |
+| `nba_stats_backfill` | Manual only | Seed historical stats data on demand |
 
-To trigger the backfill with a date range, click **Trigger DAG w/ config** in the Airflow UI and pass:
+To trigger a backfill with a date range, click **Trigger DAG w/ config** in the Airflow UI and pass:
 ```json
 {"date_from": "2024-01-01", "date_to": "2024-03-31"}
 ```
 
 ### Manual runs
 
-The `nba_transform` DAG has an `ExternalTaskSensor` (`wait_for_ingest`) that waits for `nba_ingest` to complete. For scheduled runs this works automatically. For manual triggers, execution dates won't align, so follow these steps:
+Each pipeline DAG handles its own ingest and transform tasks internally — no inter-DAG coordination is needed for manual triggers. Just trigger `nba_odds_pipeline` or `nba_stats_pipeline` directly.
 
-1. Trigger `nba_ingest` and wait for all tasks to show **success**
-2. Trigger `nba_transform`
-3. In the Graph view, click `wait_for_ingest` → **Mark Success**
-4. The downstream transform tasks will queue and run automatically
+Note: `nba_stats_pipeline` has an `ExternalTaskSensor` (`wait_for_nba_odds_pipeline`) that checks for a completed `nba_odds_pipeline` run. For manual triggers where execution dates won't align, click the sensor task in the Graph view → **Mark Success** to bypass it and run the stats pipeline independently.
 
 ## Configuration
 
@@ -105,7 +106,7 @@ DAG run results (success and failure) can be posted to a Slack channel via an [i
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
 ```
 
-That's it — the `nba_ingest` DAG will automatically post a message on each successful or failed run.
+That's it — all pipeline DAGs will automatically post a message on each successful or failed run.
 
 If `SLACK_WEBHOOK_URL` is not set, notifications are silently skipped.
 
@@ -130,21 +131,23 @@ pytest tests/unit/test_schema.py tests/integration/ -v
 ```
 odds-pipeline/
 ├── dags/
-│   ├── ingest_dag.py       # daily API fetch
-│   ├── transform_dag.py    # raw → normalized
-│   └── backfill_dag.py     # on-demand historical seeding
+│   ├── nba_odds_pipeline_dag.py   # fetch + transform odds/scores/player props
+│   ├── nba_odds_backfill_dag.py   # on-demand historical odds seeding
+│   ├── nba_stats_pipeline_dag.py  # fetch + transform player/team stats
+│   └── nba_stats_backfill_dag.py  # on-demand historical stats seeding
 ├── plugins/
-│   ├── odds_api_client.py  # Odds-API HTTP client
-│   ├── db_client.py        # Postgres utilities
-│   └── transformers/       # raw JSON → normalized table logic
+│   ├── odds_api_client.py         # Odds-API HTTP client
+│   ├── nba_api_client.py          # nba_api client
+│   ├── db_client.py               # Postgres utilities
+│   └── transformers/              # raw JSON → normalized table logic
 ├── config/
-│   └── settings.py         # markets, bookmakers, regions (edit here)
+│   └── settings.py                # markets, bookmakers, regions (edit here)
 ├── sql/
-│   └── init_schema.sql     # DB schema (auto-applied on first run)
+│   └── init_schema.sql            # DB schema (auto-applied on first run)
 ├── tests/
-│   ├── unit/               # fast tests, no Docker
-│   └── integration/        # requires data-postgres container
+│   ├── unit/                      # fast tests, no Docker
+│   └── integration/               # requires data-postgres container
 ├── docker-compose.yml
 ├── .env.example
-└── docs/plans/             # design and implementation docs
+└── docs/                          # design specs and implementation plans
 ```
