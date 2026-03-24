@@ -1,4 +1,4 @@
-# dags/backfill_dag.py
+# dags/nba_odds_backfill_dag.py
 import os
 import sys
 import time
@@ -67,7 +67,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id="nba_backfill",
+    dag_id="nba_odds_backfill",
     default_args=default_args,
     description="On-demand historical NBA data backfill",
     schedule_interval=None,  # manual trigger only

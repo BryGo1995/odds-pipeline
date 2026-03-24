@@ -1,4 +1,4 @@
-# tests/unit/test_backfill_dag.py
+# tests/unit/test_nba_odds_backfill_dag.py
 import sys
 import os
 
@@ -8,11 +8,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 def test_backfill_dag_loads_without_errors():
     from airflow.models import DagBag
     dagbag = DagBag(dag_folder="dags/", include_examples=False)
-    assert "nba_backfill" in dagbag.dags
+    assert "nba_odds_backfill" in dagbag.dags
     assert len(dagbag.import_errors) == 0
 
 
 def test_backfill_dag_has_no_schedule():
     from airflow.models import DagBag
-    dag = DagBag(dag_folder="dags/", include_examples=False).dags["nba_backfill"]
+    dag = DagBag(dag_folder="dags/", include_examples=False).dags["nba_odds_backfill"]
     assert dag.schedule_interval is None
