@@ -55,8 +55,8 @@ def test_player_game_logs_insert_is_idempotent(conn):
 
 
 def test_team_season_stats_upsert_updates_values(conn):
-    stats = [{"team_id": 9999, "team_abbreviation": "TST", "season": "2024-25",
-              "pace": 98.0, "off_rating": 110.0, "def_rating": 108.0, "opp_pts_paint_pg": 40.0}]
+    stats = [{"team_id": 9999, "team_name": "Test Team", "season": "2024-25",
+              "pace": 98.0, "off_rating": 110.0, "def_rating": 108.0, "opp_pts_pg": 40.0}]
     transform_team_season_stats(conn, stats)
     # Update pace
     stats[0]["pace"] = 102.0

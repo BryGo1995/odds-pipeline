@@ -134,18 +134,18 @@ def fetch_team_season_stats(season, delay_seconds=1):
         measure_type_detailed_defense="Opponent",
         per_mode_detailed="PerGame",
     )
-    adv_df = adv_result.get_data_frames()[0][["TEAM_ID", "TEAM_ABBREVIATION", "PACE", "OFF_RATING", "DEF_RATING"]]
-    opp_df = opp_result.get_data_frames()[0][["TEAM_ID", "OPP_PTS_PAINT"]]
+    adv_df = adv_result.get_data_frames()[0][["TEAM_ID", "TEAM_NAME", "PACE", "OFF_RATING", "DEF_RATING"]]
+    opp_df = opp_result.get_data_frames()[0][["TEAM_ID", "OPP_PTS"]]
     merged = adv_df.merge(opp_df, on="TEAM_ID", how="left")
     return [
         {
             "team_id": int(row["TEAM_ID"]),
-            "team_abbreviation": row["TEAM_ABBREVIATION"],
+            "team_name": row["TEAM_NAME"],
             "season": season,
             "pace": float(row["PACE"]) if row.get("PACE") is not None else None,
             "off_rating": float(row["OFF_RATING"]) if row.get("OFF_RATING") is not None else None,
             "def_rating": float(row["DEF_RATING"]) if row.get("DEF_RATING") is not None else None,
-            "opp_pts_paint_pg": float(row["OPP_PTS_PAINT"]) if row.get("OPP_PTS_PAINT") is not None else None,
+            "opp_pts_pg": float(row["OPP_PTS"]) if row.get("OPP_PTS") is not None else None,
         }
         for _, row in merged.iterrows()
     ]

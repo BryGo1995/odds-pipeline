@@ -36,9 +36,13 @@ def _stub_nba_api():
     if "nba_api" in sys.modules:
         return
     nba_api_stub = MagicMock()
+    http_stub = MagicMock()
+    http_stub.STATS_HEADERS = {}
     sys.modules.setdefault("nba_api", nba_api_stub)
     sys.modules.setdefault("nba_api.stats", nba_api_stub)
     sys.modules.setdefault("nba_api.stats.endpoints", nba_api_stub)
+    sys.modules.setdefault("nba_api.stats.library", nba_api_stub)
+    sys.modules.setdefault("nba_api.stats.library.http", http_stub)
 
 
 def _stub_pendulum():

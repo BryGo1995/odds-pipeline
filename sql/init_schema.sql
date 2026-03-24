@@ -126,15 +126,15 @@ CREATE INDEX IF NOT EXISTS idx_tgl_team_id   ON team_game_logs (team_id);
 CREATE INDEX IF NOT EXISTS idx_tgl_game_date ON team_game_logs (game_date);
 
 CREATE TABLE IF NOT EXISTS team_season_stats (
-    id                SERIAL PRIMARY KEY,
-    team_id           INT NOT NULL,
-    team_abbreviation TEXT,
-    season            TEXT NOT NULL,
-    pace              FLOAT,
-    off_rating        FLOAT,
-    def_rating        FLOAT,
-    opp_pts_paint_pg  FLOAT,
-    fetched_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    id         SERIAL PRIMARY KEY,
+    team_id    INT NOT NULL,
+    team_name  TEXT,
+    season     TEXT NOT NULL,
+    pace       FLOAT,
+    off_rating FLOAT,
+    def_rating FLOAT,
+    opp_pts_pg FLOAT,
+    fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (team_id, season)
 );
 

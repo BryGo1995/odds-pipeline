@@ -11,12 +11,12 @@ def _make_mock_conn():
 
 SAMPLE_STATS = {
     "team_id": 1610612743,
-    "team_abbreviation": "DEN",
+    "team_name": "Denver Nuggets",
     "season": "2024-25",
     "pace": 98.5,
     "off_rating": 115.2,
     "def_rating": 110.8,
-    "opp_pts_paint_pg": 42.1,
+    "opp_pts_pg": 42.1,
 }
 
 

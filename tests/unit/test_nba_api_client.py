@@ -82,18 +82,18 @@ def test_fetch_team_game_logs_returns_list_of_dicts():
 def test_fetch_team_season_stats_merges_advanced_and_opponent():
     from plugins.nba_api_client import fetch_team_season_stats
     adv_df = pd.DataFrame([{
-        "TEAM_ID": 1610612743, "TEAM_ABBREVIATION": "DEN",
+        "TEAM_ID": 1610612743, "TEAM_NAME": "Denver Nuggets",
         "PACE": 98.5, "OFF_RATING": 115.2, "DEF_RATING": 110.8,
     }])
     opp_df = pd.DataFrame([{
-        "TEAM_ID": 1610612743, "TEAM_ABBREVIATION": "DEN", "OPP_PTS_PAINT": 42.1,
+        "TEAM_ID": 1610612743, "TEAM_NAME": "Denver Nuggets", "OPP_PTS": 42.1,
     }])
     with patch("plugins.nba_api_client.LeagueDashTeamStats") as mock_cls:
         mock_cls.side_effect = [_mock_endpoint(adv_df), _mock_endpoint(opp_df)]
         result = fetch_team_season_stats(season="2024-25", delay_seconds=0)
     assert len(result) == 1
     assert result[0]["pace"] == pytest.approx(98.5)
-    assert result[0]["opp_pts_paint_pg"] == pytest.approx(42.1)
+    assert result[0]["opp_pts_pg"] == pytest.approx(42.1)
 
 
 def test_fetch_player_game_logs_retries_on_429():
