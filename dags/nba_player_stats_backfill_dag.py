@@ -54,8 +54,9 @@ def run_backfill(**context):
 
     conn = get_data_db_conn()
     try:
-        # Players only need to be fetched once
-        players = fetch_players(delay_seconds=BACKFILL_DELAY_SECONDS)
+        # Fetch all historical players (not just current-season active roster)
+        # so game logs from past seasons don't violate the FK constraint
+        players = fetch_players(delay_seconds=BACKFILL_DELAY_SECONDS, is_only_current_season=0)
         store_raw_response(conn, "nba_api/players", {}, players)
         transform_players(conn, players)
 

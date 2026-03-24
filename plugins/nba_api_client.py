@@ -45,21 +45,29 @@ def _call_with_retry(endpoint_cls, delay_seconds, **kwargs):
     return endpoint_cls(timeout=_DEFAULT_TIMEOUT, **kwargs)
 
 
-def fetch_players(delay_seconds=1):
-    """Fetch all active NBA players. Returns list of dicts."""
-    result = _call_with_retry(CommonAllPlayers, delay_seconds, is_only_current_season=1)
+def fetch_players(delay_seconds=1, is_only_current_season=1):
+    """Fetch NBA players. Returns list of dicts.
+
+    is_only_current_season=1 (default): active roster only.
+    is_only_current_season=0: all historical players (needed for backfills).
+    """
+    result = _call_with_retry(
+        CommonAllPlayers, delay_seconds,
+        is_only_current_season=is_only_current_season,
+    )
     df = result.get_data_frames()[0]
-    active = df[df["ROSTERSTATUS"] == 1]
+    if is_only_current_season:
+        df = df[df["ROSTERSTATUS"] == 1]
     return [
         {
             "player_id": int(row["PERSON_ID"]),
             "full_name": row["DISPLAY_FIRST_LAST"],
             "team_id": int(row["TEAM_ID"]) if row["TEAM_ID"] else None,
-            "team_abbreviation": row["TEAM_ABBREVIATION"] or None,
+            "team_abbreviation": row.get("TEAM_ABBREVIATION") or None,
             "position": row.get("POSITION") or None,
-            "is_active": True,
+            "is_active": bool(row["ROSTERSTATUS"] == 1),
         }
-        for _, row in active.iterrows()
+        for _, row in df.iterrows()
     ]
 
 

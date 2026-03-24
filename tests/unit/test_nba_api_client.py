@@ -42,6 +42,24 @@ def test_fetch_players_filters_inactive():
     assert result[0]["player_id"] == 1
 
 
+def test_fetch_players_all_historical_includes_inactive():
+    from plugins.nba_api_client import fetch_players
+    df = pd.DataFrame([
+        {"PERSON_ID": 1, "DISPLAY_FIRST_LAST": "Active Player",
+         "TEAM_ID": 1, "TEAM_ABBREVIATION": "LAL", "ROSTERSTATUS": 1, "POSITION": "G"},
+        {"PERSON_ID": 2, "DISPLAY_FIRST_LAST": "Retired Player",
+         "TEAM_ID": 0, "TEAM_ABBREVIATION": "", "ROSTERSTATUS": 0, "POSITION": ""},
+    ])
+    with patch("plugins.nba_api_client.CommonAllPlayers") as mock_cls:
+        mock_cls.return_value = _mock_endpoint(df)
+        result = fetch_players(delay_seconds=0, is_only_current_season=0)
+    assert len(result) == 2
+    active = next(r for r in result if r["player_id"] == 1)
+    retired = next(r for r in result if r["player_id"] == 2)
+    assert active["is_active"] is True
+    assert retired["is_active"] is False
+
+
 def test_fetch_player_game_logs_merges_base_and_advanced():
     from plugins.nba_api_client import fetch_player_game_logs
     base_df = pd.DataFrame([{
