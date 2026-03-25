@@ -23,7 +23,6 @@ x-airflow-common:
     AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow
   volumes:
     - ./:/opt/airflow
-    - ./logs:/opt/airflow/logs
   depends_on:
     airflow-postgres:
       condition: service_healthy
