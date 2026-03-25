@@ -1,0 +1,8 @@
+shared/
+sql/
+config/
+docs/
+tests/
+nba/ml/
+nba/plugins/
+nba/tests/
