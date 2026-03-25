@@ -19,10 +19,10 @@ x-airflow-common:
     DATA_DB_NAME: ${DATA_DB_NAME:-odds_db}
     DATA_DB_HOST: data-postgres
     DATA_DB_PORT: 5432
+    PYTHONPATH: /opt/airflow
+    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow
   volumes:
-    - ./dags:/opt/airflow/dags
-    - ./plugins:/opt/airflow/plugins
-    - ./config:/opt/airflow/config
+    - ./:/opt/airflow
     - ./logs:/opt/airflow/logs
   depends_on:
     airflow-postgres:
