@@ -44,7 +44,7 @@ def test_score_writes_recommendations_to_postgres():
 
     with patch("nba.plugins.ml.score.load_todays_features", return_value=feature_df), \
          patch("nba.plugins.ml.score.mlflow") as mock_mlflow:
-        mock_mlflow.xgboost.load_model.return_value = mock_model
+        mock_mlflow.sklearn.load_model.return_value = mock_model
         mock_mlflow.tracking.MlflowClient.return_value.get_latest_versions.return_value = mock_versions
 
         score(mock_conn, "2026-03-26")
@@ -81,7 +81,7 @@ def test_score_ranks_by_edge_descending():
 
     with patch("nba.plugins.ml.score.load_todays_features", return_value=feature_df), \
          patch("nba.plugins.ml.score.mlflow") as mock_mlflow:
-        mock_mlflow.xgboost.load_model.return_value = mock_model
+        mock_mlflow.sklearn.load_model.return_value = mock_model
         mock_mlflow.tracking.MlflowClient.return_value.get_latest_versions.return_value = mock_versions
         score(mock_conn, "2026-03-26")
 

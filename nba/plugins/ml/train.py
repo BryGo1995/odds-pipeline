@@ -11,7 +11,7 @@ import os
 
 import duckdb
 import mlflow
-import mlflow.xgboost
+import mlflow.sklearn
 import numpy as np
 import pandas as pd
 import xgboost as xgb
@@ -155,7 +155,7 @@ def train_model(features_dir: str = FEATURES_DIR) -> None:
 
         importance = dict(zip(FEATURES, model.feature_importances_.tolist()))
         mlflow.log_dict(importance, "feature_importance.json")
-        mlflow.xgboost.log_model(model, artifact_path="model")
+        mlflow.sklearn.log_model(calibrated, artifact_path="model")
 
         model_uri = f"runs:/{run.info.run_id}/model"
         mlflow.register_model(model_uri, MODEL_NAME)

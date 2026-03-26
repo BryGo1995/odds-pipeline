@@ -4,11 +4,12 @@ Scoring module for NBA player prop ML model.
 score(conn, game_date) loads the production model from the MLflow registry,
 scores today's feature Parquet file, and writes ranked recommendations to Postgres.
 """
+import logging
 import os
 
 import duckdb
 import mlflow
-import mlflow.xgboost
+import mlflow.sklearn
 import pandas as pd
 
 from nba.plugins.ml.train import FEATURES, FEATURES_DIR, MODEL_NAME, MLFLOW_TRACKING_URI, prepare_features
@@ -20,7 +21,10 @@ def load_todays_features(game_date: str, features_dir: str = FEATURES_DIR) -> pd
     conn = duckdb.connect()
     try:
         return conn.execute(f"SELECT * FROM read_parquet('{path}')").df()
-    except Exception:
+    except Exception as exc:
+        logging.getLogger(__name__).warning(
+            "Could not load features for %s from %s: %s", game_date, path, exc
+        )
         return pd.DataFrame()
     finally:
         conn.close()
@@ -43,7 +47,7 @@ def score(conn, game_date: str, features_dir: str = FEATURES_DIR) -> None:
         raise ValueError(f"No feature file found for {game_date} in {features_dir}")
 
     model_uri = f"models:/{MODEL_NAME}/Production"
-    model = mlflow.xgboost.load_model(model_uri)
+    model = mlflow.sklearn.load_model(model_uri)
 
     client = mlflow.tracking.MlflowClient()
     versions = client.get_latest_versions(MODEL_NAME, stages=["Production"])
