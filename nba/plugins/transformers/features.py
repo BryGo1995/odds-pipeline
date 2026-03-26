@@ -6,6 +6,8 @@ build_features(conn, game_date) queries player_props and player_game_logs,
 computes rolling stats and implied probability, and returns a DataFrame
 ready to write as Parquet.
 """
+from datetime import date
+
 import pandas as pd
 
 PROP_STAT_MAP = {
@@ -15,8 +17,6 @@ PROP_STAT_MAP = {
     "player_threes":           "fg3m",
     "player_threes_attempts":  "fg3a",
 }
-
-ROLLING_WINDOWS = [5, 10, 20]
 
 _PROP_TYPES = list(PROP_STAT_MAP.keys())
 
@@ -208,7 +208,6 @@ def _compute_rest_days(conn, player_ids: list, game_date: str) -> pd.DataFrame:
         )
         rows = cur.fetchall()
 
-    from datetime import date
     target = date.fromisoformat(game_date)
     result = {pid: None for pid in player_ids}
     for player_id, last_game_date in rows:
