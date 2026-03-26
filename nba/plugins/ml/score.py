@@ -11,9 +11,7 @@ import mlflow
 import mlflow.xgboost
 import pandas as pd
 
-from nba.plugins.ml.train import FEATURES, MODEL_NAME, MLFLOW_TRACKING_URI, prepare_features
-
-FEATURES_DIR = os.environ.get("FEATURES_DIR", "/data/features")
+from nba.plugins.ml.train import FEATURES, FEATURES_DIR, MODEL_NAME, MLFLOW_TRACKING_URI, prepare_features
 
 
 def load_todays_features(game_date: str, features_dir: str = FEATURES_DIR) -> pd.DataFrame:
@@ -51,12 +49,7 @@ def score(conn, game_date: str, features_dir: str = FEATURES_DIR) -> None:
     versions = client.get_latest_versions(MODEL_NAME, stages=["Production"])
     model_version = versions[0].version if versions else "unknown"
 
-    # prepare_features requires labeled rows; for scoring we call it after
-    # temporarily filling actual_result so the label cast doesn't raise.
-    scoring_df = df.copy()
-    scoring_df["actual_result"] = 0  # placeholder — label is not used during scoring
-    X, _, _ = prepare_features(scoring_df)
-    df = df.copy()
+    X, _, _ = prepare_features(df)
     df["model_prob"]  = model.predict_proba(X)[:, 1]
     df["outcome"]     = "Over"
     df["implied_prob"] = df["implied_prob_over"]
