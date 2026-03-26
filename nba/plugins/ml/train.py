@@ -6,6 +6,7 @@ train_model() reads all labeled Parquet files via DuckDB, trains a calibrated
 XGBoost classifier, logs metrics to MLflow, and tags the run as
 'promotion_candidate' if ROC-AUC exceeds the current production model.
 """
+import logging
 import os
 
 import duckdb
@@ -133,9 +134,8 @@ def train_model(features_dir: str = FEATURES_DIR) -> None:
 
     with mlflow.start_run() as run:
         mlflow.log_params({
-            "n_estimators":     300,
-            "max_depth":        5,
-            "learning_rate":    0.05,
+            **{k: v for k, v in model.get_params().items()
+               if k in ("n_estimators", "max_depth", "learning_rate", "subsample", "colsample_bytree")},
             "validation_days":  VALIDATION_DAYS,
             "train_rows":       len(train_df),
             "val_rows":         len(val_df),
@@ -176,6 +176,10 @@ def _get_production_model_auc() -> float | None:
         if not versions:
             return None
         run = mlflow.get_run(versions[0].run_id)
-        return float(run.data.metrics.get("roc_auc", 0))
-    except Exception:
+        auc = run.data.metrics.get("roc_auc")
+        return float(auc) if auc is not None else None
+    except Exception as exc:
+        logging.getLogger(__name__).warning(
+            "Could not retrieve production model AUC (treating as no production model): %s", exc
+        )
         return None
