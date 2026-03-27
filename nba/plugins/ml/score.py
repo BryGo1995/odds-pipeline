@@ -46,12 +46,15 @@ def score(conn, game_date: str, features_dir: str = FEATURES_DIR) -> None:
     if df.empty:
         raise ValueError(f"No feature file found for {game_date} in {features_dir}")
 
-    model_uri = f"models:/{MODEL_NAME}/Production"
+    model_uri = f"models:/{MODEL_NAME}@production"
     model = mlflow.sklearn.load_model(model_uri)
 
     client = mlflow.tracking.MlflowClient()
-    versions = client.get_latest_versions(MODEL_NAME, stages=["Production"])
-    model_version = versions[0].version if versions else "unknown"
+    try:
+        mv = client.get_model_version_by_alias(MODEL_NAME, "production")
+        model_version = mv.version
+    except Exception:
+        model_version = "unknown"
 
     X, _, _ = prepare_features(df)
     df["model_prob"]  = model.predict_proba(X)[:, 1]

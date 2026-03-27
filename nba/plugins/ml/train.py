@@ -187,10 +187,8 @@ def _get_production_model_auc() -> float | None:
     """Return the ROC-AUC of the current production model, or None if none exists."""
     try:
         client = mlflow.tracking.MlflowClient()
-        versions = client.get_latest_versions(MODEL_NAME, stages=["Production"])
-        if not versions:
-            return None
-        run = mlflow.get_run(versions[0].run_id)
+        mv = client.get_model_version_by_alias(MODEL_NAME, "production")
+        run = mlflow.get_run(mv.run_id)
         auc = run.data.metrics.get("roc_auc")
         return float(auc) if auc is not None else None
     except Exception as exc:
