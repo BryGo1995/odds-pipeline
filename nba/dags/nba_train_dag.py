@@ -4,12 +4,13 @@ import pendulum
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
-from shared.plugins.slack_notifier import notify_failure, notify_success
+from shared.plugins.slack_notifier import notify_failure, notify_model_ready
 from nba.plugins.ml.train import train_model
 
 
 def run_train_model(**context):
-    train_model()
+    run_id = train_model()
+    context["ti"].xcom_push(key="mlflow_run_id", value=run_id)
 
 
 default_args = {
@@ -26,7 +27,7 @@ with DAG(
     start_date=pendulum.datetime(2024, 1, 1, tz="America/Denver"),
     catchup=False,
     tags=["nba", "ml"],
-    on_success_callback=notify_success,
+    on_success_callback=notify_model_ready,
     on_failure_callback=notify_failure,
 ) as dag:
     t_train = PythonOperator(
