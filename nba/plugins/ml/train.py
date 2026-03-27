@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 from sklearn.calibration import CalibratedClassifierCV
+from sklearn.frozen import FrozenEstimator
 from sklearn.metrics import (
     accuracy_score,
     brier_score_loss,
@@ -73,7 +74,7 @@ def prepare_features(df: pd.DataFrame) -> tuple:
     df["prop_type_encoded"] = le.transform(
         df["prop_type"].map(lambda x: x if x in le.classes_ else le.classes_[0])
     )
-    df["is_home"] = df["is_home"].fillna(0.5).astype(float)
+    df["is_home"] = df["is_home"].astype(object).fillna(0.5).astype(float)
     for col in ["rolling_avg_5g", "rolling_avg_10g", "rolling_avg_20g",
                 "rolling_std_10g", "line_movement", "rest_days"]:
         if col in df.columns:
@@ -87,7 +88,7 @@ def prepare_features(df: pd.DataFrame) -> tuple:
     return X, y, le
 
 
-def train_model(features_dir: str = FEATURES_DIR) -> None:
+def train_model(features_dir: str = FEATURES_DIR) -> str:
     """
     Train and log a new XGBoost model. Tags the MLflow run as 'promotion_candidate'
     if ROC-AUC exceeds the current production model.
@@ -133,17 +134,30 @@ def train_model(features_dir: str = FEATURES_DIR) -> None:
     model.fit(X_train, y_train)
 
     # Calibrate probabilities — critical for reliable edge = model_prob - implied_prob
-    calibrated = CalibratedClassifierCV(model, cv="prefit", method="isotonic")
-    calibrated.fit(X_val, y_val)
+    # FrozenEstimator + single-fold cv replicates the old cv="prefit" semantics
+    # (model is already fitted; calibrate on all val rows without refitting)
+    val_has_both_classes = len(np.unique(y_val)) >= 2
+    if val_has_both_classes:
+        n_val = len(X_val)
+        _cv = [(np.array([], dtype=int), np.arange(n_val, dtype=int))]
+        calibrated = CalibratedClassifierCV(FrozenEstimator(model), method="isotonic", cv=_cv)
+        calibrated.fit(X_val, y_val)
+        y_prob = calibrated.predict_proba(X_val)[:, 1]
+    else:
+        log.warning(
+            "Validation set has only one class — skipping isotonic calibration, "
+            "using raw model probabilities for metrics."
+        )
+        y_prob = model.predict_proba(X_val)[:, 1]
+        calibrated = model  # store raw model; calibration will be applied post-hoc in production
 
-    y_prob = calibrated.predict_proba(X_val)[:, 1]
     y_pred = (y_prob >= 0.5).astype(int)
 
-    roc_auc   = roc_auc_score(y_val, y_prob)
+    roc_auc   = roc_auc_score(y_val, y_prob) if val_has_both_classes else float("nan")
     accuracy  = accuracy_score(y_val, y_pred)
     precision = precision_score(y_val, y_pred, zero_division=0)
     recall    = recall_score(y_val, y_pred, zero_division=0)
-    brier     = brier_score_loss(y_val, y_prob)
+    brier     = brier_score_loss(y_val, y_prob) if val_has_both_classes else float("nan")
 
     prod_roc_auc = _get_production_model_auc()
 
@@ -181,6 +195,8 @@ def train_model(features_dir: str = FEATURES_DIR) -> None:
             mlflow.set_tag("promotion_candidate", "false")
             mlflow.set_tag("promotion_note",
                            f"ROC-AUC {roc_auc:.4f} — no improvement over production ({prod_roc_auc:.4f})")
+
+    return run.info.run_id
 
 
 def _get_production_model_auc() -> float | None:
