@@ -60,6 +60,64 @@ def notify_failure(context):
     _post(text)
 
 
+_DAILY_PIPELINE_DAGS = [
+    "nba_odds_pipeline",
+    "nba_stats_pipeline",
+    "nba_feature_dag",
+    "nba_score_dag",
+]
+
+
+def notify_score_ready(context):
+    """on_success_callback for nba_score_dag. Posts a checklist of all upstream DAG statuses."""
+    if not _WEBHOOK_URL:
+        logger.warning("Slack notification skipped: SLACK_WEBHOOK_URL not set")
+        return
+
+    execution_date = context["execution_date"]
+    mt_exec = pendulum.instance(execution_date).in_timezone("America/Denver")
+    date_str = mt_exec.strftime("%a %b %-d")
+
+    day_start = pendulum.instance(execution_date).start_of("day")
+    day_end = day_start.add(days=1)
+
+    lines = []
+    for dag_id in _DAILY_PIPELINE_DAGS:
+        run = _get_dag_run(dag_id, day_start, day_end)
+        if run is None:
+            lines.append(f"⚠️ {dag_id} — not found")
+        else:
+            end = run.end_date or execution_date
+            mt_end = pendulum.instance(end).in_timezone("America/Denver")
+            time_str = mt_end.strftime("%-I:%M%p").lower() + " MT"
+            emoji = "✅" if run.state == "success" else "❌"
+            lines.append(f"{emoji} {dag_id} — {time_str}")
+
+    text = f"🏀 Recommendations ready — {date_str}\n\n" + "\n".join(lines)
+    _post(text)
+
+
+def _get_dag_run(dag_id, day_start, day_end):
+    """Return the most recent DagRun for dag_id within the UTC day window, or None."""
+    try:
+        from airflow.models import DagRun
+        from airflow.utils.session import create_session
+        with create_session() as session:
+            return (
+                session.query(DagRun)
+                .filter(
+                    DagRun.dag_id == dag_id,
+                    DagRun.execution_date >= day_start,
+                    DagRun.execution_date < day_end,
+                )
+                .order_by(DagRun.execution_date.desc())
+                .first()
+            )
+    except Exception as exc:
+        logger.warning("Failed to query DagRun for %s: %s", dag_id, exc)
+        return None
+
+
 def _post(text):
     try:
         response = requests.post(_WEBHOOK_URL, json={"text": text})
