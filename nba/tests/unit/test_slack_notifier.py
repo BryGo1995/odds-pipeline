@@ -224,3 +224,118 @@ def test_notify_score_ready_skips_when_no_webhook():
          patch("shared.plugins.slack_notifier.requests.post") as mock_post:
         notify_score_ready(ctx)
         mock_post.assert_not_called()
+
+
+# --- notify_model_ready ---
+
+def _make_model_context(run_id="run-abc-123"):
+    ctx = make_context(dag_id="nba_train_dag")
+    ctx["task_instance"] = MagicMock()
+    ctx["task_instance"].xcom_pull.return_value = run_id
+    return ctx
+
+
+def test_notify_model_ready_promotion_candidate():
+    """Promotion candidate: 🚀 message with delta and model version link."""
+    from shared.plugins.slack_notifier import notify_model_ready
+
+    ctx = _make_model_context("run-abc-123")
+
+    mock_run = MagicMock()
+    mock_run.data.metrics = {
+        "roc_auc": 0.6821,
+        "accuracy": 0.6312,
+        "brier_score": 0.2341,
+        "roc_auc_delta_vs_production": 0.0134,
+    }
+    mock_run.data.tags = {"promotion_candidate": "true"}
+
+    mock_version = MagicMock()
+    mock_version.version = "12"
+    mock_version.name = "nba_prop_model"
+
+    with patch("shared.plugins.slack_notifier._WEBHOOK_URL", "https://hooks.slack.com/test"), \
+         patch("shared.plugins.slack_notifier.mlflow") as mock_mlflow, \
+         patch("shared.plugins.slack_notifier.requests.post") as mock_post:
+        mock_mlflow.get_run.return_value = mock_run
+        mock_mlflow.tracking.MlflowClient.return_value.search_model_versions.return_value = [mock_version]
+        mock_post.return_value = MagicMock(raise_for_status=MagicMock())
+
+        notify_model_ready(ctx)
+        text = mock_post.call_args[1]["json"]["text"]
+        assert "🚀" in text
+        assert "nba_prop_model" in text
+        assert "0.6821" in text
+        assert "+0.0134" in text
+        assert "http://mlflow.internal/#/models/nba_prop_model/versions/12" in text
+
+
+def test_notify_model_ready_no_improvement():
+    """No improvement: 🤖 message with negative delta and run link."""
+    from shared.plugins.slack_notifier import notify_model_ready
+
+    ctx = _make_model_context("run-xyz-456")
+
+    mock_run = MagicMock()
+    mock_run.data.metrics = {
+        "roc_auc": 0.6542,
+        "accuracy": 0.6100,
+        "brier_score": 0.2500,
+        "roc_auc_delta_vs_production": -0.0145,
+    }
+    mock_run.data.tags = {"promotion_candidate": "false"}
+
+    mock_version = MagicMock()
+    mock_version.version = "11"
+    mock_version.name = "nba_prop_model"
+
+    with patch("shared.plugins.slack_notifier._WEBHOOK_URL", "https://hooks.slack.com/test"), \
+         patch("shared.plugins.slack_notifier.mlflow") as mock_mlflow, \
+         patch("shared.plugins.slack_notifier.requests.post") as mock_post:
+        mock_mlflow.get_run.return_value = mock_run
+        mock_mlflow.tracking.MlflowClient.return_value.search_model_versions.return_value = [mock_version]
+        mock_post.return_value = MagicMock(raise_for_status=MagicMock())
+
+        notify_model_ready(ctx)
+        text = mock_post.call_args[1]["json"]["text"]
+        assert "🤖" in text
+        assert "0.6542" in text
+        assert "-0.0145" in text
+        assert "http://mlflow.internal/#/runs/run-xyz-456" in text
+
+
+def test_notify_model_ready_mlflow_unreachable(caplog):
+    """MLflow raises → logs warning, posts fallback message, does not raise."""
+    import logging
+    from shared.plugins.slack_notifier import notify_model_ready
+
+    ctx = _make_model_context("run-abc")
+
+    with patch("shared.plugins.slack_notifier._WEBHOOK_URL", "https://hooks.slack.com/test"), \
+         patch("shared.plugins.slack_notifier.mlflow") as mock_mlflow, \
+         patch("shared.plugins.slack_notifier.requests.post") as mock_post, \
+         caplog.at_level(logging.WARNING, logger="shared.plugins.slack_notifier"):
+        mock_mlflow.get_run.side_effect = Exception("Connection refused")
+        mock_post.return_value = MagicMock(raise_for_status=MagicMock())
+
+        notify_model_ready(ctx)  # must not raise
+        assert "Failed to fetch MLflow" in caplog.text
+        mock_post.assert_called_once()
+
+
+def test_notify_model_ready_no_xcom():
+    """Missing run_id from XCom → MLflow query fails gracefully, fallback message posted."""
+    from shared.plugins.slack_notifier import notify_model_ready
+
+    ctx = make_context(dag_id="nba_train_dag")
+    ctx["task_instance"] = MagicMock()
+    ctx["task_instance"].xcom_pull.return_value = None
+
+    with patch("shared.plugins.slack_notifier._WEBHOOK_URL", "https://hooks.slack.com/test"), \
+         patch("shared.plugins.slack_notifier.mlflow") as mock_mlflow, \
+         patch("shared.plugins.slack_notifier.requests.post") as mock_post:
+        mock_mlflow.get_run.side_effect = Exception("run_id is None")
+        mock_post.return_value = MagicMock(raise_for_status=MagicMock())
+
+        notify_model_ready(ctx)  # must not raise
+        mock_post.assert_called_once()
