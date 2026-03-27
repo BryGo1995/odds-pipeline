@@ -48,7 +48,8 @@ def _stub_nba_api():
 
 def _stub_pendulum():
     """Stub pendulum so DAGs can be imported without it being installed."""
-    if "pendulum" in sys.modules:
+    import importlib.util
+    if "pendulum" in sys.modules or importlib.util.find_spec("pendulum") is not None:
         return
     pendulum_stub = MagicMock()
     # Mock the datetime function to return a MagicMock that behaves like a datetime

@@ -1,10 +1,10 @@
 # tests/unit/test_slack_notifier.py
-from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 
 def make_context(dag_id="nba_ingest", exec_time=None):
     """Build a minimal Airflow DAG-level callback context dict."""
+    import pendulum
     dag = MagicMock()
     dag.dag_id = dag_id
     dag_run = MagicMock()
@@ -12,7 +12,8 @@ def make_context(dag_id="nba_ingest", exec_time=None):
     return {
         "dag": dag,
         "dag_run": dag_run,
-        "execution_date": exec_time or datetime(2024, 1, 1, 20, 2),
+        # 2024-01-02 03:02 UTC = 2024-01-01 20:02 MST
+        "execution_date": exec_time or pendulum.datetime(2024, 1, 2, 3, 2, tz="UTC"),
     }
 
 
@@ -104,3 +105,20 @@ def test_notify_failure_degrades_gracefully_when_context_missing():
         payload = mock_post.call_args[1]["json"]
         assert "❌" in payload["text"]
         assert "unknown" in payload["text"]
+
+
+def test_notify_failure_uses_mt_time():
+    """execution_date in UTC must be displayed as MT in the failure message."""
+    import pendulum
+    from shared.plugins.slack_notifier import notify_failure
+
+    # 2024-01-02 03:02 UTC = 2024-01-01 20:02 MST (UTC-7, January is standard time)
+    exec_time = pendulum.datetime(2024, 1, 2, 3, 2, tz="UTC")
+    ctx = make_failure_context(exec_time=exec_time)
+    with patch("shared.plugins.slack_notifier._WEBHOOK_URL", "https://hooks.slack.com/test"), \
+         patch("shared.plugins.slack_notifier.requests.post") as mock_post:
+        mock_post.return_value = MagicMock(raise_for_status=MagicMock())
+        notify_failure(ctx)
+        payload = mock_post.call_args[1]["json"]
+        assert "8:02pm" in payload["text"].lower()
+        assert "MT" in payload["text"]

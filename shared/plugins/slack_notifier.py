@@ -2,6 +2,7 @@
 import logging
 import os
 
+import pendulum
 import requests
 from airflow.models import XCom
 
@@ -39,14 +40,15 @@ def notify_success(context):
 
 
 def notify_failure(context):
-    """DAG-level on_failure_callback. Posts a detailed failure alert."""
+    """DAG-level on_failure_callback. Posts a detailed failure alert with time in MT."""
     if not _WEBHOOK_URL:
         logger.warning("Slack notification skipped: SLACK_WEBHOOK_URL not set")
         return
 
     dag_id = context["dag"].dag_id
     execution_date = context["execution_date"]
-    time_str = execution_date.strftime("%-I:%M%p").lower()
+    mt_time = pendulum.instance(execution_date).in_timezone("America/Denver")
+    time_str = mt_time.strftime("%-I:%M%p").lower() + " MT"
 
     task_instance = context.get("task_instance")
     exception = context.get("exception")
