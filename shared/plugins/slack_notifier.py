@@ -93,7 +93,10 @@ def notify_score_ready(context):
             emoji = "✅" if run.state == "success" else "❌"
             lines.append(f"{emoji} {dag_id} — {time_str}")
 
-    text = f"🏀 Recommendations ready — {date_str}\n\n" + "\n".join(lines)
+    checklist = "\n".join(lines)
+    has_issues = any(line.startswith("❌") or line.startswith("⚠️") for line in lines)
+    warning = "\n\n⚠️ One or more upstream DAGs had issues — review checklist above" if has_issues else ""
+    text = f"🏀 Recommendations ready — {date_str}\n\n{checklist}{warning}"
     _post(text)
 
 

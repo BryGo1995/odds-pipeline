@@ -185,6 +185,7 @@ def test_notify_score_ready_missing_dag():
         notify_score_ready(ctx)
         text = mock_post.call_args[1]["json"]["text"]
         assert "⚠️ nba_stats_pipeline — not found" in text
+        assert "⚠️ One or more upstream DAGs had issues" in text
 
 
 def test_notify_score_ready_failed_dag():
@@ -208,3 +209,18 @@ def test_notify_score_ready_failed_dag():
         notify_score_ready(ctx)
         text = mock_post.call_args[1]["json"]["text"]
         assert "❌ nba_feature_dag" in text
+        assert "⚠️ One or more upstream DAGs had issues" in text
+
+
+def test_notify_score_ready_skips_when_no_webhook():
+    """No SLACK_WEBHOOK_URL → no HTTP call made."""
+    import pendulum
+    from shared.plugins.slack_notifier import notify_score_ready
+
+    exec_time = pendulum.datetime(2024, 1, 2, 16, 0, tz="UTC")
+    ctx = make_context(dag_id="nba_score_dag", exec_time=exec_time)
+
+    with patch("shared.plugins.slack_notifier._WEBHOOK_URL", ""), \
+         patch("shared.plugins.slack_notifier.requests.post") as mock_post:
+        notify_score_ready(ctx)
+        mock_post.assert_not_called()
