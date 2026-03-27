@@ -80,7 +80,7 @@ def prepare_features(df: pd.DataFrame) -> tuple:
             numeric = pd.to_numeric(df[col], errors="coerce")
             df[col] = numeric.fillna(numeric.median())
     X = df[FEATURES]
-    if "actual_result" in df.columns and df["actual_result"].notna().any():
+    if "actual_result" in df.columns and df["actual_result"].notna().all():
         y = df["actual_result"].astype(int)
     else:
         y = None
