@@ -60,7 +60,7 @@ def load_training_data(features_dir: str) -> pd.DataFrame:
         ).df()
     finally:
         conn.close()
-    return df
+    return df.dropna(subset=["actual_result"])
 
 
 def prepare_features(df: pd.DataFrame) -> tuple:
