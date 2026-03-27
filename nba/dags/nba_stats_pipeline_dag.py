@@ -16,7 +16,7 @@ from nba.plugins.nba_api_client import (
     fetch_team_season_stats,
     fetch_teams,
 )
-from shared.plugins.slack_notifier import notify_failure, notify_success
+from shared.plugins.slack_notifier import notify_failure
 from nba.plugins.transformers.game_id_linker import link_nba_game_ids
 from nba.plugins.transformers.player_game_logs import transform_player_game_logs
 from nba.plugins.transformers.player_name_resolution import resolve_player_ids
@@ -230,7 +230,6 @@ with DAG(
     start_date=pendulum.datetime(2024, 1, 1, tz="America/Denver"),
     catchup=False,
     tags=["nba", "stats"],
-    on_success_callback=notify_success,
     on_failure_callback=notify_failure,
 ) as dag:
     wait_for_odds = ExternalTaskSensor(

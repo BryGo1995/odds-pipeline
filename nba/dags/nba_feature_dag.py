@@ -7,7 +7,7 @@ from airflow.operators.python import PythonOperator
 from airflow.sensors.external_task import ExternalTaskSensor
 
 from shared.plugins.db_client import get_data_db_conn
-from shared.plugins.slack_notifier import notify_failure, notify_success
+from shared.plugins.slack_notifier import notify_failure
 from nba.plugins.transformers.features import build_features
 
 FEATURES_DIR = os.environ.get("FEATURES_DIR", "/data/features")
@@ -43,7 +43,6 @@ with DAG(
     start_date=pendulum.datetime(2024, 1, 1, tz="America/Denver"),
     catchup=False,
     tags=["nba", "ml"],
-    on_success_callback=notify_success,
     on_failure_callback=notify_failure,
 ) as dag:
     wait_for_stats = ExternalTaskSensor(

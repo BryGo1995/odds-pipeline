@@ -13,7 +13,7 @@ from config.settings import (
 )
 from shared.plugins.db_client import get_data_db_conn, store_raw_response
 from shared.plugins.odds_api_client import fetch_events, fetch_odds, fetch_scores, fetch_player_props
-from shared.plugins.slack_notifier import notify_failure, notify_success
+from shared.plugins.slack_notifier import notify_failure
 from nba.plugins.transformers.events import transform_events
 from nba.plugins.transformers.odds import transform_odds
 from nba.plugins.transformers.player_props import transform_player_props
@@ -206,7 +206,6 @@ with DAG(
     start_date=pendulum.datetime(2024, 1, 1, tz="America/Denver"),
     catchup=False,
     tags=["nba", "odds"],
-    on_success_callback=notify_success,
     on_failure_callback=notify_failure,
 ) as dag:
     t_fetch_events  = PythonOperator(task_id="fetch_events",           python_callable=fetch_events_task)
