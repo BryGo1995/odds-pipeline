@@ -2,7 +2,6 @@
 import logging
 import os
 
-import mlflow
 import pendulum
 import requests
 from airflow.models import XCom
@@ -112,6 +111,7 @@ def notify_model_ready(context):
     run_id = ti.xcom_pull(task_ids="train_model", key="mlflow_run_id") if ti else None
 
     try:
+        import mlflow  # lazy import — mlflow only needed when this callback runs
         run = mlflow.get_run(run_id)
         metrics = run.data.metrics
         tags = run.data.tags
@@ -130,10 +130,8 @@ def notify_model_ready(context):
         if is_candidate:
             if delta is None:
                 delta_str = "baseline"
-            elif delta >= 0:
-                delta_str = f"+{delta:.4f}"
             else:
-                delta_str = f"{delta:.4f}"
+                delta_str = f"{delta:+.4f}"
             link = (
                 f"{_MLFLOW_BASE_URL}/#/models/{model_name}/versions/{version_num}"
                 if version_num
