@@ -21,8 +21,9 @@ PROP_STAT_MAP = {
 _PROP_TYPES = list(PROP_STAT_MAP.keys())
 
 
-def american_odds_to_implied_prob(price: float) -> float:
+def american_odds_to_implied_prob(price) -> float:
     """Convert American odds (e.g. -110, +200) to implied probability."""
+    price = float(price)
     if price > 0:
         return 100.0 / (price + 100.0)
     return abs(price) / (abs(price) + 100.0)
