@@ -56,7 +56,7 @@ def load_training_data(features_dir: str) -> pd.DataFrame:
     conn = duckdb.connect()
     try:
         df = conn.execute(
-            f"SELECT * FROM read_parquet('{features_dir}/*.parquet') WHERE actual_result IS NOT NULL"
+            f"SELECT * FROM read_parquet('{features_dir}/*.parquet', union_by_name=true) WHERE actual_result IS NOT NULL"
         ).df()
     finally:
         conn.close()
