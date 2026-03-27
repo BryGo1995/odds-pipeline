@@ -6,7 +6,7 @@ from airflow.operators.python import PythonOperator
 from airflow.sensors.external_task import ExternalTaskSensor
 
 from shared.plugins.db_client import get_data_db_conn
-from shared.plugins.slack_notifier import notify_failure, notify_success
+from shared.plugins.slack_notifier import notify_failure, notify_score_ready
 from nba.plugins.ml.score import score
 
 
@@ -33,7 +33,7 @@ with DAG(
     start_date=pendulum.datetime(2024, 1, 1, tz="America/Denver"),
     catchup=False,
     tags=["nba", "ml"],
-    on_success_callback=notify_success,
+    on_success_callback=notify_score_ready,
     on_failure_callback=notify_failure,
 ) as dag:
     wait_for_features = ExternalTaskSensor(

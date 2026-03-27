@@ -30,7 +30,7 @@ def test_sensor_targets_nba_feature_dag():
 
 def test_dag_has_slack_callbacks():
     from airflow.models import DagBag
-    from shared.plugins.slack_notifier import notify_success, notify_failure
+    from shared.plugins.slack_notifier import notify_score_ready, notify_failure
     dag = DagBag(dag_folder="nba/dags/", include_examples=False).dags["nba_score_dag"]
-    assert dag.on_success_callback is notify_success
+    assert dag.on_success_callback is notify_score_ready
     assert dag.on_failure_callback is notify_failure
