@@ -103,6 +103,18 @@ def train_model(features_dir: str = FEATURES_DIR) -> None:
     train_df = df[pd.to_datetime(df["game_date"]) <= cutoff]
     val_df   = df[pd.to_datetime(df["game_date"]) >  cutoff]
 
+    log = logging.getLogger(__name__)
+    log.info(
+        "Training split: %d total labeled rows | cutoff=%s | train=%d | val=%d",
+        len(df), cutoff.date(), len(train_df), len(val_df),
+    )
+
+    if train_df.empty:
+        raise ValueError(
+            f"Training set is empty — all {len(df)} labeled rows fall within the "
+            f"{VALIDATION_DAYS}-day validation window (cutoff={cutoff.date()}). "
+            "Run the feature backfill for older dates to generate training data."
+        )
     if val_df.empty:
         raise ValueError("Validation set is empty — add more recent data before training")
 
