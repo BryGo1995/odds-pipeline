@@ -39,7 +39,7 @@ FEATURES = [
     "prop_type_encoded",
 ]
 MODEL_NAME = "nba_prop_model"
-VALIDATION_DAYS = 30
+VALIDATION_DAYS = 2
 FEATURES_DIR = os.environ.get("FEATURES_DIR", "/data/features")
 MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI", "http://mlflow:5000")
 
