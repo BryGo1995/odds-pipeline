@@ -25,7 +25,7 @@ from nba.plugins.transformers.team_game_logs import transform_team_game_logs
 from nba.plugins.transformers.team_season_stats import transform_team_season_stats
 from nba.plugins.transformers.teams import transform_teams
 
-CURRENT_SEASON = "2024-25"  # Update manually each season
+CURRENT_SEASON = "2025-26"  # Update manually each season
 INGEST_DELAY_SECONDS = 1
 
 

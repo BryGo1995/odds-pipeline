@@ -14,10 +14,23 @@ Odds-API ──► nba_odds_pipeline ──► games / odds / scores / player_pr
                     │ (ExternalTaskSensor)
                     ▼
 nba_api ────► nba_stats_pipeline ──► teams / players / game_logs / season_stats
+                    │
+                    │ (ExternalTaskSensor)
+                    ▼
+             nba_feature_dag ──────► features/props_features_<date>.parquet
+                    │
+                    │ (ExternalTaskSensor)
+                    ▼
+             nba_score_dag ─────────► recommendations (Postgres)
+
+nba_train_dag (weekly) ────────────► MLflow model registry
 ```
 
 - **nba_odds_pipeline**: Fetches events, odds, scores, and player props from the Odds-API; transforms into structured tables in a single daily run (8am MT)
 - **nba_stats_pipeline**: Fetches and transforms NBA player/team stats from nba_api; waits for `nba_odds_pipeline` to complete before running (8:20am MT)
+- **nba_feature_dag**: Builds player prop features from Postgres and writes daily Parquet files; waits for `nba_stats_pipeline` (8:40am MT)
+- **nba_score_dag**: Loads the production XGBoost model from MLflow and scores today's props; writes ranked recommendations to Postgres (9am MT)
+- **nba_train_dag**: Trains the XGBoost model weekly on historical features/labels and promotes the best model in MLflow (Mondays 3am MT)
 - **nba_odds_backfill**: On-demand historical odds data seeding (manual trigger only)
 - **nba_stats_backfill**: On-demand historical stats data seeding (manual trigger only)
 
@@ -55,6 +68,7 @@ Wait ~60 seconds for Airflow to initialize.
 |---|---|---|
 | Airflow | http://localhost:8080 | admin / admin |
 | pgAdmin | http://localhost:5050 | admin@admin.com / admin |
+| MLflow | http://localhost:5001 | — |
 
 In pgAdmin, connect to `data-postgres`:
 - Host: `data-postgres`
@@ -68,6 +82,9 @@ In pgAdmin, connect to `data-postgres`:
 |---|---|---|
 | `nba_odds_pipeline` | `0 15 * * *` (8am MT) | Fetch + transform odds, scores, and player props |
 | `nba_stats_pipeline` | `20 15 * * *` (8:20am MT) | Fetch + transform player/team stats; waits on odds pipeline |
+| `nba_feature_dag` | `40 15 * * *` (8:40am MT) | Build player prop features → Parquet; waits on stats pipeline |
+| `nba_score_dag` | `0 16 * * *` (9am MT) | Score today's props with ML model → recommendations; waits on feature dag |
+| `nba_train_dag` | `0 10 * * 1` (Mon 3am MT) | Train XGBoost model on historical data; log + promote via MLflow |
 | `nba_odds_backfill` | Manual only | Seed historical odds data on demand |
 | `nba_stats_backfill` | Manual only | Seed historical stats data on demand |
 
@@ -130,24 +147,36 @@ pytest tests/unit/test_schema.py tests/integration/ -v
 
 ```
 odds-pipeline/
-├── dags/
-│   ├── nba_odds_pipeline_dag.py   # fetch + transform odds/scores/player props
-│   ├── nba_odds_backfill_dag.py   # on-demand historical odds seeding
-│   ├── nba_stats_pipeline_dag.py  # fetch + transform player/team stats
-│   └── nba_stats_backfill_dag.py  # on-demand historical stats seeding
-├── plugins/
-│   ├── odds_api_client.py         # Odds-API HTTP client
-│   ├── nba_api_client.py          # nba_api client
-│   ├── db_client.py               # Postgres utilities
-│   └── transformers/              # raw JSON → normalized table logic
+├── nba/
+│   ├── dags/
+│   │   ├── nba_odds_pipeline_dag.py   # fetch + transform odds/scores/player props
+│   │   ├── nba_odds_backfill_dag.py   # on-demand historical odds seeding
+│   │   ├── nba_stats_pipeline_dag.py  # fetch + transform player/team stats
+│   │   ├── nba_stats_backfill_dag.py  # on-demand historical stats seeding
+│   │   ├── nba_feature_dag.py         # build player prop features → Parquet
+│   │   ├── nba_train_dag.py           # train XGBoost model; log to MLflow
+│   │   └── nba_score_dag.py           # score daily props → recommendations table
+│   ├── plugins/
+│   │   ├── ml/
+│   │   │   ├── train.py               # XGBoost training + MLflow promotion
+│   │   │   └── score.py               # load production model + write recommendations
+│   │   └── transformers/
+│   │       ├── features.py            # player prop feature engineering
+│   │       └── ...                    # raw JSON → normalized table logic
+│   └── tests/
+│       ├── unit/                      # fast tests, no Docker
+│       └── integration/               # requires data-postgres container
+├── shared/
+│   └── plugins/
+│       ├── odds_api_client.py         # Odds-API HTTP client
+│       ├── db_client.py               # Postgres utilities
+│       └── slack_notifier.py          # Slack webhook notifications
 ├── config/
-│   └── settings.py                # markets, bookmakers, regions (edit here)
+│   └── settings.py                    # markets, bookmakers, regions (edit here)
 ├── sql/
-│   └── init_schema.sql            # DB schema (auto-applied on first run)
-├── tests/
-│   ├── unit/                      # fast tests, no Docker
-│   └── integration/               # requires data-postgres container
+│   ├── init_schema.sql                # initial DB schema (auto-applied on first run)
+│   └── migrations/                    # incremental schema migrations
 ├── docker-compose.yml
 ├── .env.example
-└── docs/                          # design specs and implementation plans
+└── docs/                              # design specs and implementation plans
 ```
