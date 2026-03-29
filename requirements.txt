@@ -11,4 +11,4 @@ pyarrow==15.0.2
 duckdb==0.10.3
 xgboost==2.0.3
 mlflow==2.14.1
-scikit-learn==1.5.0
+scikit-learn==1.6.1

@@ -138,9 +138,7 @@ def train_model(features_dir: str = FEATURES_DIR) -> str:
     # (model is already fitted; calibrate on all val rows without refitting)
     val_has_both_classes = len(np.unique(y_val)) >= 2
     if val_has_both_classes:
-        n_val = len(X_val)
-        _cv = [(np.array([], dtype=int), np.arange(n_val, dtype=int))]
-        calibrated = CalibratedClassifierCV(FrozenEstimator(model), method="isotonic", cv=_cv)
+        calibrated = CalibratedClassifierCV(FrozenEstimator(model), cv="prefit", method="isotonic")
         calibrated.fit(X_val, y_val)
         y_prob = calibrated.predict_proba(X_val)[:, 1]
     else:
