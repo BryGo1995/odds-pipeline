@@ -39,6 +39,16 @@ FEATURES = [
     "rest_days",
     "prop_type_encoded",
 ]
+PER_PROP_FEATURES = [
+    "implied_prob_over",
+    "line_movement",
+    "rolling_avg_5g",
+    "rolling_avg_10g",
+    "rolling_avg_20g",
+    "rolling_std_10g",
+    "is_home",
+    "rest_days",
+]
 MODEL_NAME = "nba_prop_model"
 VALIDATION_DAYS = 2
 FEATURES_DIR = os.environ.get("FEATURES_DIR", "/data/features")
@@ -64,23 +74,25 @@ def load_training_data(features_dir: str) -> pd.DataFrame:
     return df.dropna(subset=["actual_result"])
 
 
-def prepare_features(df: pd.DataFrame) -> tuple:
+def prepare_features(df: pd.DataFrame, features: list[str] | None = None) -> tuple:
     """
     Encode categorical features and fill NAs. Returns (X, y, label_encoder).
     Uses a deterministic LabelEncoder fitted on the full known prop type list.
     """
     le = _make_label_encoder()
     df = df.copy()
-    df["prop_type_encoded"] = le.transform(
-        df["prop_type"].map(lambda x: x if x in le.classes_ else le.classes_[0])
-    )
+    if features is None or "prop_type_encoded" in features:
+        df["prop_type_encoded"] = le.transform(
+            df["prop_type"].map(lambda x: x if x in le.classes_ else le.classes_[0])
+        )
     df["is_home"] = df["is_home"].astype(object).fillna(0.5).astype(float)
     for col in ["rolling_avg_5g", "rolling_avg_10g", "rolling_avg_20g",
                 "rolling_std_10g", "line_movement", "rest_days"]:
         if col in df.columns:
             numeric = pd.to_numeric(df[col], errors="coerce")
             df[col] = numeric.fillna(numeric.median())
-    X = df[FEATURES]
+    use_features = features if features is not None else FEATURES
+    X = df[use_features]
     if "actual_result" in df.columns and df["actual_result"].notna().all():
         y = df["actual_result"].astype(int)
     else:
@@ -88,16 +100,30 @@ def prepare_features(df: pd.DataFrame) -> tuple:
     return X, y, le
 
 
-def train_model(features_dir: str = FEATURES_DIR) -> str:
+def train_model(features_dir: str = FEATURES_DIR, prop_type: str | None = None) -> str:
     """
     Train and log a new XGBoost model. Tags the MLflow run as 'promotion_candidate'
     if ROC-AUC exceeds the current production model.
+
+    If prop_type is given, trains only on rows of that prop type and registers
+    the model as nba_prop_model_{prop_type}.
     """
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
     df = load_training_data(features_dir)
-    if df.empty or len(df) < 100:
-        raise ValueError(f"Insufficient training data: {len(df)} labeled rows (minimum 100)")
+
+    if prop_type is not None:
+        df = df[df["prop_type"] == prop_type]
+        model_name = f"{MODEL_NAME}_{prop_type}"
+        features = PER_PROP_FEATURES
+        min_rows = 50
+    else:
+        model_name = MODEL_NAME
+        features = FEATURES
+        min_rows = 100
+
+    if df.empty or len(df) < min_rows:
+        raise ValueError(f"Insufficient training data: {len(df)} labeled rows (minimum {min_rows})")
 
     df = df.sort_values("game_date")
     cutoff = pd.to_datetime(df["game_date"].max()) - pd.Timedelta(days=VALIDATION_DAYS)
@@ -119,8 +145,8 @@ def train_model(features_dir: str = FEATURES_DIR) -> str:
     if val_df.empty:
         raise ValueError("Validation set is empty — add more recent data before training")
 
-    X_train, y_train, _ = prepare_features(train_df)
-    X_val,   y_val,   _ = prepare_features(val_df)
+    X_train, y_train, _ = prepare_features(train_df, features=features)
+    X_val,   y_val,   _ = prepare_features(val_df, features=features)
 
     model = xgb.XGBClassifier(
         n_estimators=300,
@@ -134,17 +160,21 @@ def train_model(features_dir: str = FEATURES_DIR) -> str:
     model.fit(X_train, y_train)
 
     # Calibrate probabilities — critical for reliable edge = model_prob - implied_prob
-    # FrozenEstimator + single-fold cv replicates the old cv="prefit" semantics
-    # (model is already fitted; calibrate on all val rows without refitting)
+    # FrozenEstimator ensures the model is not refit during calibration CV
     val_has_both_classes = len(np.unique(y_val)) >= 2
-    if val_has_both_classes:
-        calibrated = CalibratedClassifierCV(FrozenEstimator(model), cv="prefit", method="isotonic")
+    n_val = len(y_val)
+    min_per_class = min(np.unique(y_val, return_counts=True)[1])
+    can_calibrate = val_has_both_classes and min_per_class >= 2
+    if can_calibrate:
+        cv_folds = min(5, min_per_class)
+        calibrated = CalibratedClassifierCV(FrozenEstimator(model), cv=cv_folds, method="isotonic")
         calibrated.fit(X_val, y_val)
         y_prob = calibrated.predict_proba(X_val)[:, 1]
     else:
         log.warning(
-            "Validation set has only one class — skipping isotonic calibration, "
-            "using raw model probabilities for metrics."
+            "Validation set too small for calibration (n=%d, both_classes=%s) "
+            "— skipping isotonic calibration, using raw model probabilities.",
+            n_val, val_has_both_classes,
         )
         y_prob = model.predict_proba(X_val)[:, 1]
         calibrated = model  # store raw model; calibration will be applied post-hoc in production
@@ -157,7 +187,7 @@ def train_model(features_dir: str = FEATURES_DIR) -> str:
     recall    = recall_score(y_val, y_pred, zero_division=0)
     brier     = brier_score_loss(y_val, y_prob) if val_has_both_classes else float("nan")
 
-    prod_roc_auc = _get_production_model_auc()
+    prod_roc_auc = _get_production_model_auc(model_name)
 
     with mlflow.start_run() as run:
         mlflow.log_params({
@@ -177,12 +207,12 @@ def train_model(features_dir: str = FEATURES_DIR) -> str:
         if prod_roc_auc is not None:
             mlflow.log_metric("roc_auc_delta_vs_production", roc_auc - prod_roc_auc)
 
-        importance = dict(zip(FEATURES, model.feature_importances_.tolist()))
+        importance = dict(zip(features, model.feature_importances_.tolist()))
         mlflow.log_dict(importance, "feature_importance.json")
         mlflow.sklearn.log_model(calibrated, artifact_path="model")
 
         model_uri = f"runs:/{run.info.run_id}/model"
-        mlflow.register_model(model_uri, MODEL_NAME)
+        mlflow.register_model(model_uri, model_name)
 
         if prod_roc_auc is None or roc_auc > prod_roc_auc:
             delta_str = f"+{roc_auc - prod_roc_auc:.4f}" if prod_roc_auc is not None else "baseline"
@@ -197,11 +227,11 @@ def train_model(features_dir: str = FEATURES_DIR) -> str:
     return run.info.run_id
 
 
-def _get_production_model_auc() -> float | None:
+def _get_production_model_auc(model_name: str = MODEL_NAME) -> float | None:
     """Return the ROC-AUC of the current production model, or None if none exists."""
     try:
         client = mlflow.tracking.MlflowClient()
-        mv = client.get_model_version_by_alias(MODEL_NAME, "production")
+        mv = client.get_model_version_by_alias(model_name, "production")
         run = mlflow.get_run(mv.run_id)
         auc = run.data.metrics.get("roc_auc")
         return float(auc) if auc is not None else None
@@ -210,3 +240,19 @@ def _get_production_model_auc() -> float | None:
             "Could not retrieve production model AUC (treating as no production model): %s", exc
         )
         return None
+
+
+def train_all_models(features_dir: str = FEATURES_DIR) -> dict[str, str]:
+    """
+    Train one model per prop type. Returns dict of {prop_type: mlflow_run_id}.
+    Skips prop types with insufficient training data.
+    """
+    log = logging.getLogger(__name__)
+    results = {}
+    for prop_type in sorted(PROP_STAT_MAP.keys()):
+        try:
+            run_id = train_model(features_dir, prop_type=prop_type)
+            results[prop_type] = run_id
+        except ValueError as exc:
+            log.warning("Skipping %s: %s", prop_type, exc)
+    return results
