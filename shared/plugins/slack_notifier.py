@@ -130,6 +130,67 @@ def notify_model_ready(context):
     _post(text)
 
 
+def notify_picks_settled(game_date, results: list[dict]) -> None:
+    """
+    Post a picks recap to Slack for a settled game date.
+
+    Args:
+        game_date: datetime.date of the game day
+        results:   list of dicts with keys:
+                   player_name, prop_type, line, outcome, actual_result,
+                   actual_stat_value, edge
+                   actual_result=None means unresolvable (DNP / postponed)
+    """
+    if not _WEBHOOK_URL:
+        logger.warning("Slack notification skipped: SLACK_WEBHOOK_URL not set")
+        return
+
+    date_str = game_date.strftime("%b %-d, %Y")
+
+    hits   = sum(1 for r in results if r["actual_result"] is True)
+    total  = sum(1 for r in results if r["actual_result"] is not None)
+    pct    = int(round(hits / total * 100)) if total else 0
+    avgedge = (
+        sum(r["edge"] for r in results if r["edge"] is not None) / len(results)
+        if results else 0.0
+    )
+
+    header = (
+        f"\U0001f4ca Picks recap \u2014 {date_str}\n"
+        f"Top-{len(results)}: {hits}/{total} hit ({pct}%) | Avg edge: {avgedge:+.3f}"
+    )
+
+    lines = []
+    _PROP_LABELS = {
+        "player_points":           "Points",
+        "player_rebounds":         "Rebounds",
+        "player_assists":          "Assists",
+        "player_threes":           "3-Pointers",
+        "player_threes_attempts":  "3PA",
+    }
+    for r in results:
+        prop_label = _PROP_LABELS.get(r["prop_type"], r["prop_type"])
+        line_str   = f"O {r['line']}"
+        edge_str   = f"{r['edge']:+.3f}" if r["edge"] is not None else "n/a"
+
+        if r["actual_result"] is True:
+            emoji   = "\u2705"
+            stat_str = str(int(r["actual_stat_value"])) if r["actual_stat_value"] is not None else "\u2014"
+        elif r["actual_result"] is False:
+            emoji   = "\u274c"
+            stat_str = str(int(r["actual_stat_value"])) if r["actual_stat_value"] is not None else "\u2014"
+        else:
+            emoji   = "\u2753"
+            stat_str = "\u2014"
+
+        lines.append(
+            f"{emoji} {r['player_name']} \u2014 {prop_label} {line_str} | Scored: {stat_str} | Edge: {edge_str}"
+        )
+
+    text = header + "\n\n" + "\n".join(lines)
+    _post(text)
+
+
 def _get_dag_run(dag_id, day_start, day_end):
     """Return the most recent DagRun for dag_id within the UTC day window, or None."""
     try:
