@@ -70,7 +70,44 @@ def notify_score_ready(context):
     checklist = "\n".join(lines)
     has_issues = any(line.startswith("❌") or line.startswith("⚠️") for line in lines)
     warning = "\n\n⚠️ One or more upstream DAGs had issues — review checklist above" if has_issues else ""
-    text = f"🏀 Recommendations ready — {date_str}\n\n{checklist}{warning}"
+
+    # Count top-10 picks per prop type
+    try:
+        from shared.plugins.db_client import get_data_db_conn
+        data_conn = get_data_db_conn()
+        try:
+            with data_conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT prop_type, COUNT(*)
+                    FROM recommendations
+                    WHERE game_date = %s AND rank <= 10
+                    GROUP BY prop_type ORDER BY prop_type
+                    """,
+                    (execution_date.strftime("%Y-%m-%d"),),
+                )
+                prop_counts = cur.fetchall()
+        finally:
+            data_conn.close()
+
+        _PROP_LABELS = {
+            "player_points": "Points",
+            "player_rebounds": "Rebounds",
+            "player_assists": "Assists",
+        }
+        if prop_counts:
+            breakdown = " | ".join(
+                f"{_PROP_LABELS.get(pt, pt)}: {count}"
+                for pt, count in prop_counts
+            )
+        else:
+            breakdown = ""
+    except Exception as exc:
+        logger.warning("Could not fetch prop type breakdown: %s", exc)
+        breakdown = ""
+
+    breakdown_line = f"\n{breakdown}" if breakdown else ""
+    text = f"\U0001f3c0 Recommendations ready \u2014 {date_str}\n\n{checklist}{breakdown_line}{warning}"
     _post(text)
 
 
