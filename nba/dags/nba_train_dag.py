@@ -5,12 +5,12 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 
 from shared.plugins.slack_notifier import notify_failure, notify_model_ready
-from nba.plugins.ml.train import train_model
+from nba.plugins.ml.train import train_all_models
 
 
 def run_train_model(**context):
-    run_id = train_model()
-    context["ti"].xcom_push(key="mlflow_run_id", value=run_id)
+    run_ids = train_all_models()
+    context["ti"].xcom_push(key="mlflow_run_ids", value=run_ids)
 
 
 default_args = {

@@ -175,82 +175,101 @@ def test_notify_score_ready_skips_when_no_webhook():
 
 # --- notify_model_ready ---
 
-def _make_model_context(run_id="run-abc-123"):
+def _make_model_context(run_ids=None):
+    if run_ids is None:
+        run_ids = {
+            "player_points": "run-points-123",
+            "player_rebounds": "run-rebounds-456",
+            "player_assists": "run-assists-789",
+        }
     ctx = make_context(dag_id="nba_train_dag")
     ctx["task_instance"] = MagicMock()
-    ctx["task_instance"].xcom_pull.return_value = run_id
+    ctx["task_instance"].xcom_pull.return_value = run_ids
     return ctx
 
 
 def test_notify_model_ready_promotion_candidate():
-    """Promotion candidate: 🚀 message with delta and model version link."""
+    """Promotion candidates: 🚀 header with per-prop-type ROC-AUC lines and ✅ promoted status."""
     from shared.plugins.slack_notifier import notify_model_ready
 
-    ctx = _make_model_context("run-abc-123")
-
-    mock_run = MagicMock()
-    mock_run.data.metrics = {
-        "roc_auc": 0.6821,
-        "accuracy": 0.6312,
-        "brier_score": 0.2341,
-        "roc_auc_delta_vs_production": 0.0134,
+    run_ids = {
+        "player_points": "run-points-123",
+        "player_rebounds": "run-rebounds-456",
+        "player_assists": "run-assists-789",
     }
-    mock_run.data.tags = {"promotion_candidate": "true"}
+    ctx = _make_model_context(run_ids)
 
-    mock_version = MagicMock()
-    mock_version.version = "12"
-    mock_version.name = "nba_prop_model"
+    def make_mock_run(roc_auc, delta):
+        mock_run = MagicMock()
+        mock_run.data.metrics = {
+            "roc_auc": roc_auc,
+            "roc_auc_delta_vs_production": delta,
+        }
+        mock_run.data.tags = {"promotion_candidate": "true"}
+        return mock_run
+
+    run_map = {
+        "run-points-123": make_mock_run(0.6821, 0.0134),
+        "run-rebounds-456": make_mock_run(0.5823, 0.0041),
+        "run-assists-789": make_mock_run(0.6100, 0.0088),
+    }
 
     with patch("shared.plugins.slack_notifier._WEBHOOK_URL", "https://hooks.slack.com/test"), \
-         patch("mlflow.get_run") as mock_get_run, \
-         patch("mlflow.tracking.MlflowClient") as mock_client_cls, \
+         patch("mlflow.get_run", side_effect=lambda run_id: run_map[run_id]), \
          patch("shared.plugins.slack_notifier.requests.post") as mock_post:
-        mock_get_run.return_value = mock_run
-        mock_client_cls.return_value.search_model_versions.return_value = [mock_version]
         mock_post.return_value = MagicMock(raise_for_status=MagicMock())
 
         notify_model_ready(ctx)
         text = mock_post.call_args[1]["json"]["text"]
-        assert "🚀" in text
-        assert "nba_prop_model" in text
+        assert "🚀 Models trained" in text
+        assert "Points: ROC-AUC" in text
+        assert "Rebounds: ROC-AUC" in text
+        assert "Assists: ROC-AUC" in text
         assert "0.6821" in text
         assert "+0.0134" in text
-        assert "http://mlflow.internal/#/models/nba_prop_model/versions/12" in text
+        assert "✅ promoted" in text
 
 
 def test_notify_model_ready_no_improvement():
-    """No improvement: 🤖 message with negative delta and run link."""
+    """No improvement: 🚀 header with per-prop-type lines showing — no improvement."""
     from shared.plugins.slack_notifier import notify_model_ready
 
-    ctx = _make_model_context("run-xyz-456")
-
-    mock_run = MagicMock()
-    mock_run.data.metrics = {
-        "roc_auc": 0.6542,
-        "accuracy": 0.6100,
-        "brier_score": 0.2500,
-        "roc_auc_delta_vs_production": -0.0145,
+    run_ids = {
+        "player_points": "run-points-111",
+        "player_rebounds": "run-rebounds-222",
+        "player_assists": "run-assists-333",
     }
-    mock_run.data.tags = {"promotion_candidate": "false"}
+    ctx = _make_model_context(run_ids)
 
-    mock_version = MagicMock()
-    mock_version.version = "11"
-    mock_version.name = "nba_prop_model"
+    def make_mock_run(roc_auc, delta):
+        mock_run = MagicMock()
+        mock_run.data.metrics = {
+            "roc_auc": roc_auc,
+            "roc_auc_delta_vs_production": delta,
+        }
+        mock_run.data.tags = {"promotion_candidate": "false"}
+        return mock_run
+
+    run_map = {
+        "run-points-111": make_mock_run(0.6542, -0.0145),
+        "run-rebounds-222": make_mock_run(0.5512, -0.0023),
+        "run-assists-333": make_mock_run(0.5900, -0.0060),
+    }
 
     with patch("shared.plugins.slack_notifier._WEBHOOK_URL", "https://hooks.slack.com/test"), \
-         patch("mlflow.get_run") as mock_get_run, \
-         patch("mlflow.tracking.MlflowClient") as mock_client_cls, \
+         patch("mlflow.get_run", side_effect=lambda run_id: run_map[run_id]), \
          patch("shared.plugins.slack_notifier.requests.post") as mock_post:
-        mock_get_run.return_value = mock_run
-        mock_client_cls.return_value.search_model_versions.return_value = [mock_version]
         mock_post.return_value = MagicMock(raise_for_status=MagicMock())
 
         notify_model_ready(ctx)
         text = mock_post.call_args[1]["json"]["text"]
-        assert "🤖" in text
+        assert "🚀 Models trained" in text
+        assert "Points: ROC-AUC" in text
+        assert "Rebounds: ROC-AUC" in text
+        assert "Assists: ROC-AUC" in text
         assert "0.6542" in text
         assert "-0.0145" in text
-        assert "http://mlflow.internal/#/runs/run-xyz-456" in text
+        assert "— no improvement" in text
 
 
 def test_notify_model_ready_mlflow_unreachable(caplog):
@@ -258,7 +277,11 @@ def test_notify_model_ready_mlflow_unreachable(caplog):
     import logging
     from shared.plugins.slack_notifier import notify_model_ready
 
-    ctx = _make_model_context("run-abc")
+    run_ids = {
+        "player_points": "run-points-abc",
+        "player_rebounds": "run-rebounds-def",
+    }
+    ctx = _make_model_context(run_ids)
 
     with patch("shared.plugins.slack_notifier._WEBHOOK_URL", "https://hooks.slack.com/test"), \
          patch("mlflow.get_run") as mock_get_run, \

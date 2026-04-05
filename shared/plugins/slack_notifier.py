@@ -75,57 +75,49 @@ def notify_score_ready(context):
 
 
 def notify_model_ready(context):
-    """on_success_callback for nba_train_dag. Posts model metrics and promotion status."""
+    """on_success_callback for nba_train_dag. Posts per-prop-type model metrics."""
     if not _WEBHOOK_URL:
         logger.warning("Slack notification skipped: SLACK_WEBHOOK_URL not set")
         return
 
     ti = context.get("task_instance")
-    run_id = ti.xcom_pull(task_ids="train_model", key="mlflow_run_id") if ti else None
+    run_ids = ti.xcom_pull(task_ids="train_model", key="mlflow_run_ids") if ti else None
+
+    if not run_ids or not isinstance(run_ids, dict):
+        _post("\U0001f916 Model training completed (no per-model details available)")
+        return
 
     try:
-        import mlflow  # lazy import — mlflow only needed when this callback runs
-        run = mlflow.get_run(run_id)
-        metrics = run.data.metrics
-        tags = run.data.tags
+        import mlflow
 
-        roc_auc = metrics.get("roc_auc", 0.0)
-        accuracy = metrics.get("accuracy", 0.0)
-        brier = metrics.get("brier_score", 0.0)
-        delta = metrics.get("roc_auc_delta_vs_production")
-        is_candidate = tags.get("promotion_candidate") == "true"
+        lines = []
+        for prop_type, run_id in sorted(run_ids.items()):
+            run = mlflow.get_run(run_id)
+            metrics = run.data.metrics
+            tags = run.data.tags
 
-        client = mlflow.tracking.MlflowClient()
-        versions = client.search_model_versions(f"run_id='{run_id}'")
-        model_name = versions[0].name if versions else "nba_prop_model"
-        version_num = versions[0].version if versions else None
+            roc_auc = metrics.get("roc_auc", 0.0)
+            delta = metrics.get("roc_auc_delta_vs_production")
+            is_candidate = tags.get("promotion_candidate") == "true"
 
-        if is_candidate:
             if delta is None:
                 delta_str = "baseline"
             else:
                 delta_str = f"{delta:+.4f}"
-            link = (
-                f"{_MLFLOW_BASE_URL}/#/models/{model_name}/versions/{version_num}"
-                if version_num
-                else f"{_MLFLOW_BASE_URL}/#/runs/{run_id}"
-            )
-            text = (
-                f"🚀 New model ready for promotion — {model_name}\n\n"
-                f"ROC-AUC: {roc_auc:.4f} ({delta_str} vs production)\n"
-                f"Accuracy: {accuracy:.4f} | Brier: {brier:.4f}\n\n"
-                f"Review: {link}"
-            )
-        else:
-            delta_str = f"{delta:+.4f}" if delta is not None else "n/a"
-            text = (
-                f"🤖 Model trained — no improvement over production\n\n"
-                f"ROC-AUC: {roc_auc:.4f} ({delta_str} vs production)\n\n"
-                f"{_MLFLOW_BASE_URL}/#/runs/{run_id}"
-            )
+
+            _PROP_LABELS = {
+                "player_points": "Points",
+                "player_rebounds": "Rebounds",
+                "player_assists": "Assists",
+            }
+            label = _PROP_LABELS.get(prop_type, prop_type)
+            status = "\u2705 promoted" if is_candidate else "\u2014 no improvement"
+            lines.append(f"  {label}: ROC-AUC {roc_auc:.4f} ({delta_str}) {status}")
+
+        text = "\U0001f680 Models trained\n\n" + "\n".join(lines)
     except Exception as exc:
         logger.warning("Failed to fetch MLflow run details: %s", exc)
-        text = "🤖 Model training completed (details unavailable)"
+        text = "\U0001f916 Model training completed (details unavailable)"
 
     _post(text)
 
