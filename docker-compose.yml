@@ -21,6 +21,7 @@ x-airflow-common:
     DATA_DB_PORT: 5432
     PYTHONPATH: /opt/airflow
     AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/nba/dags
+    AIRFLOW__WEBSERVER__COOKIE_NAME: odds_session
     MLFLOW_TRACKING_URI: http://mlflow:5000
     FEATURES_DIR: /data/features
   volumes:
@@ -38,6 +39,7 @@ x-airflow-common:
 services:
   airflow-postgres:
     image: postgres:15
+    restart: unless-stopped
     environment:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
@@ -52,6 +54,7 @@ services:
 
   data-postgres:
     image: postgres:15
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${DATA_DB_USER:-odds}
       POSTGRES_PASSWORD: ${DATA_DB_PASSWORD:-odds_password}
@@ -87,6 +90,7 @@ services:
 
   airflow-webserver:
     <<: *airflow-common
+    restart: unless-stopped
     command: webserver
     ports:
       - "8080:8080"
@@ -101,6 +105,7 @@ services:
 
   airflow-scheduler:
     <<: *airflow-common
+    restart: unless-stopped
     command: scheduler
     depends_on:
       airflow-init:
@@ -108,6 +113,7 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4:8.5
+    restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@admin.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
@@ -118,6 +124,7 @@ services:
 
   mlflow:
     image: ghcr.io/mlflow/mlflow:v2.14.1
+    restart: unless-stopped
     command: >
       mlflow server
       --host 0.0.0.0
@@ -137,6 +144,7 @@ services:
       retries: 5
 
   odds-admin:
+    restart: unless-stopped
     build:
       context: ../odds-admin
       dockerfile: Dockerfile
