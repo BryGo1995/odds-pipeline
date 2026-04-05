@@ -19,6 +19,7 @@ def test_dag_has_expected_tasks():
         "transform_teams", "transform_players",
         "transform_player_game_logs", "transform_team_game_logs", "transform_team_season_stats",
         "resolve_player_ids", "link_nba_game_ids",
+        "settle_recommendations",
     }
 
 
@@ -53,6 +54,11 @@ def test_dag_task_chain():
 
     # resolve_player_ids >> link_nba_game_ids
     assert "link_nba_game_ids" in [t.task_id for t in dag.get_task("resolve_player_ids").downstream_list]
+
+    # link_nba_game_ids >> settle_recommendations
+    assert "settle_recommendations" in [
+        t.task_id for t in dag.get_task("link_nba_game_ids").downstream_list
+    ]
 
 
 def test_dag_has_slack_callbacks():

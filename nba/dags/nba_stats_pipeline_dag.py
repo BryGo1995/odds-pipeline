@@ -24,6 +24,7 @@ from nba.plugins.transformers.players import transform_players
 from nba.plugins.transformers.team_game_logs import transform_team_game_logs
 from nba.plugins.transformers.team_season_stats import transform_team_season_stats
 from nba.plugins.transformers.teams import transform_teams
+from nba.plugins.ml.settle import settle_recommendations as _settle_recommendations
 
 CURRENT_SEASON = "2025-26"  # Update manually each season
 INGEST_DELAY_SECONDS = 1
@@ -211,6 +212,14 @@ def run_link_nba_game_ids():
         conn.close()
 
 
+def run_settle_recommendations(**context):
+    conn = get_data_db_conn()
+    try:
+        _settle_recommendations(conn)
+    finally:
+        conn.close()
+
+
 # ---------------------------------------------------------------------------
 # DAG definition
 # ---------------------------------------------------------------------------
@@ -255,6 +264,7 @@ with DAG(
     t_xform_tss        = PythonOperator(task_id="transform_team_season_stats",python_callable=run_transform_team_season_stats)
     t_resolve          = PythonOperator(task_id="resolve_player_ids",         python_callable=run_resolve_player_ids)
     t_link_games       = PythonOperator(task_id="link_nba_game_ids",          python_callable=run_link_nba_game_ids)
+    t_settle           = PythonOperator(task_id="settle_recommendations",    python_callable=run_settle_recommendations)
 
     fetches = [t_fetch_teams, t_fetch_players, t_fetch_pgl, t_fetch_tgl, t_fetch_tss]
 
@@ -263,4 +273,4 @@ with DAG(
     t_xform_teams >> t_xform_players
     t_xform_players >> [t_xform_pgl, t_xform_tgl, t_xform_tss]
     [t_xform_pgl, t_xform_tgl, t_xform_tss] >> t_resolve
-    t_resolve >> t_link_games
+    t_resolve >> t_link_games >> t_settle
