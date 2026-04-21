@@ -119,7 +119,13 @@ def fetch_player_props_task(**context):
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT game_id FROM games WHERE commence_time >= CURRENT_DATE ORDER BY commence_time"
+                """
+                SELECT game_id FROM games
+                WHERE commence_time >= CURRENT_DATE
+                  AND sport = %s
+                ORDER BY commence_time
+                """,
+                (SPORT,),
             )
             game_ids = [row[0] for row in cur.fetchall()]
 
