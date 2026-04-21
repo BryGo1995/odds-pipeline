@@ -137,14 +137,14 @@ If `SLACK_WEBHOOK_URL` is not set, notifications are silently skipped.
 
 ```bash
 pip install -r requirements-dev.txt
-pytest tests/unit/ -v --ignore=tests/unit/test_schema.py
+pytest nba/tests/unit shared/tests mlb/tests -v --ignore=nba/tests/unit/test_schema.py
 ```
 
 **Schema + integration tests** (requires `data-postgres` running):
 
 ```bash
 docker compose up data-postgres -d
-pytest tests/unit/test_schema.py tests/integration/ -v
+pytest nba/tests/unit/test_schema.py nba/tests/integration/ -v
 ```
 
 ## Project Structure
@@ -152,6 +152,7 @@ pytest tests/unit/test_schema.py tests/integration/ -v
 ```
 odds-pipeline/
 ├── nba/
+│   ├── config.py                      # NBA markets, bookmakers, prop markets
 │   ├── dags/
 │   │   ├── nba_odds_pipeline_dag.py   # fetch + transform odds/scores/player props
 │   │   ├── nba_odds_backfill_dag.py   # on-demand historical odds seeding
@@ -163,20 +164,32 @@ odds-pipeline/
 │   ├── plugins/
 │   │   ├── ml/
 │   │   │   ├── train.py               # XGBoost training + MLflow promotion
-│   │   │   └── score.py               # load production model + write recommendations
+│   │   │   ├── score.py               # load production model + write recommendations
+│   │   │   └── settle.py              # settle recommendations against game results
 │   │   └── transformers/
 │   │       ├── features.py            # player prop feature engineering
-│   │       └── ...                    # raw JSON → normalized table logic
+│   │       └── ...                    # NBA-specific raw JSON → normalized logic
 │   └── tests/
 │       ├── unit/                      # fast tests, no Docker
 │       └── integration/               # requires data-postgres container
+├── mlb/
+│   ├── config.py                      # MLB markets, bookmakers, batter prop markets
+│   ├── dags/
+│   │   ├── mlb_odds_pipeline_dag.py   # fetch + transform MLB odds/scores/batter props
+│   │   └── mlb_odds_backfill_dag.py   # on-demand historical MLB odds seeding
+│   └── tests/unit/                    # fast MLB tests
 ├── shared/
-│   └── plugins/
-│       ├── odds_api_client.py         # Odds-API HTTP client
-│       ├── db_client.py               # Postgres utilities
-│       └── slack_notifier.py          # Slack webhook notifications
-├── config/
-│   └── settings.py                    # markets, bookmakers, regions (edit here)
+│   ├── plugins/
+│   │   ├── odds_api_client.py         # Odds-API HTTP client (sport-agnostic)
+│   │   ├── db_client.py               # Postgres utilities
+│   │   ├── slack_notifier.py          # Slack webhook notifications
+│   │   ├── odds_math.py               # American odds → implied probability
+│   │   └── transformers/              # sport-agnostic transformers
+│   │       ├── events.py
+│   │       ├── odds.py
+│   │       ├── player_props.py
+│   │       └── scores.py
+│   └── tests/unit/                    # shared-module tests
 ├── sql/
 │   ├── init_schema.sql                # initial DB schema (auto-applied on first run)
 │   └── migrations/                    # incremental schema migrations

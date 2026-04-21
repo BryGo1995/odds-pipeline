@@ -30,12 +30,17 @@ def resolve_player_ids(conn, slack_webhook_url=None):
     Then populate player_props.nba_player_id for all resolved names.
     """
     with conn.cursor() as cur:
-        # Unresolved names: in player_props but not yet in player_name_mappings
+        # Unresolved NBA names: props on NBA games that aren't yet in
+        # player_name_mappings. The sport filter prevents MLB batter names from
+        # being fuzzy-matched against the NBA players table (which would produce
+        # bad mappings and Slack noise).
         cur.execute(
             """
             SELECT DISTINCT pp.player_name
             FROM player_props pp
+            JOIN games g ON g.game_id = pp.game_id
             WHERE pp.player_name IS NOT NULL
+              AND g.sport = 'basketball_nba'
               AND NOT EXISTS (
                 SELECT 1 FROM player_name_mappings m
                 WHERE m.odds_api_name = pp.player_name
@@ -78,13 +83,18 @@ def resolve_player_ids(conn, slack_webhook_url=None):
                 logger.warning("Low confidence match for '%s': score=%.1f", odds_name, best_score)
                 unresolved_names.append((odds_name, best_score))
 
-        # Backfill player_props.nba_player_id for all mapped names
+        # Backfill player_props.nba_player_id for all mapped names, but only
+        # for props on NBA games. Without the sport filter, an MLB batter who
+        # shares a name with an NBA player would get nba_player_id set on their
+        # MLB row.
         cur.execute(
             """
             UPDATE player_props pp
             SET nba_player_id = m.nba_player_id
-            FROM player_name_mappings m
+            FROM player_name_mappings m, games g
             WHERE pp.player_name = m.odds_api_name
+              AND g.game_id = pp.game_id
+              AND g.sport = 'basketball_nba'
               AND pp.nba_player_id IS NULL
             """
         )
