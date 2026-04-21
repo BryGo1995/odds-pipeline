@@ -16,8 +16,8 @@ from shared.plugins.odds_api_client import fetch_events, fetch_odds, fetch_score
 from shared.plugins.slack_notifier import notify_failure
 from shared.plugins.transformers.events import transform_events
 from shared.plugins.transformers.scores import transform_scores
-from nba.plugins.transformers.odds import transform_odds
-from nba.plugins.transformers.player_props import transform_player_props
+from shared.plugins.transformers.odds import transform_odds
+from shared.plugins.transformers.player_props import transform_player_props
 
 
 # ---------------------------------------------------------------------------
