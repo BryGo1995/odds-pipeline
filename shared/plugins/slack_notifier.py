@@ -81,7 +81,7 @@ def notify_score_ready(context):
                     """
                     SELECT prop_type, COUNT(*)
                     FROM recommendations
-                    WHERE game_date = %s AND rank <= 10
+                    WHERE game_date = %s AND rank <= 10 AND sport = 'NBA'
                     GROUP BY prop_type ORDER BY prop_type
                     """,
                     (execution_date.strftime("%Y-%m-%d"),),
