@@ -15,8 +15,7 @@ import mlflow.sklearn
 import numpy as np
 import pandas as pd
 import xgboost as xgb
-from sklearn.calibration import CalibratedClassifierCV
-from sklearn.frozen import FrozenEstimator
+from sklearn.isotonic import IsotonicRegression
 from sklearn.metrics import (
     accuracy_score,
     brier_score_loss,
@@ -100,6 +99,24 @@ def prepare_features(df: pd.DataFrame, features: list[str] | None = None) -> tup
     return X, y, le
 
 
+class _CalibratedModel:
+    """Wraps an XGBoost model + isotonic calibrator into a single sklearn-compatible object."""
+
+    def __init__(self, base_model, isotonic: IsotonicRegression):
+        self.base_model = base_model
+        self.isotonic = isotonic
+        self.classes_ = base_model.classes_
+
+    def predict_proba(self, X):
+        raw = self.base_model.predict_proba(X)[:, 1]
+        calibrated = self.isotonic.predict(raw)
+        return np.column_stack([1 - calibrated, calibrated])
+
+    def predict(self, X):
+        proba = self.predict_proba(X)[:, 1]
+        return (proba >= 0.5).astype(int)
+
+
 def train_model(features_dir: str = FEATURES_DIR, prop_type: str | None = None) -> str:
     """
     Train and log a new XGBoost model. Tags the MLflow run as 'promotion_candidate'
@@ -160,16 +177,17 @@ def train_model(features_dir: str = FEATURES_DIR, prop_type: str | None = None) 
     model.fit(X_train, y_train)
 
     # Calibrate probabilities — critical for reliable edge = model_prob - implied_prob
-    # FrozenEstimator ensures the model is not refit during calibration CV
+    # Manual isotonic calibration to avoid sklearn 1.6 FrozenEstimator/__sklearn_tags__ bug
     val_has_both_classes = len(np.unique(y_val)) >= 2
     n_val = len(y_val)
     min_per_class = min(np.unique(y_val, return_counts=True)[1])
     can_calibrate = val_has_both_classes and min_per_class >= 2
     if can_calibrate:
-        cv_folds = min(5, min_per_class)
-        calibrated = CalibratedClassifierCV(FrozenEstimator(model), cv=cv_folds, method="isotonic")
-        calibrated.fit(X_val, y_val)
-        y_prob = calibrated.predict_proba(X_val)[:, 1]
+        raw_prob = model.predict_proba(X_val)[:, 1]
+        iso = IsotonicRegression(y_min=0, y_max=1, out_of_bounds="clip")
+        iso.fit(raw_prob, y_val)
+        y_prob = iso.predict(raw_prob)
+        calibrated = _CalibratedModel(model, iso)
     else:
         log.warning(
             "Validation set too small for calibration (n=%d, both_classes=%s) "
@@ -177,7 +195,7 @@ def train_model(features_dir: str = FEATURES_DIR, prop_type: str | None = None) 
             n_val, val_has_both_classes,
         )
         y_prob = model.predict_proba(X_val)[:, 1]
-        calibrated = model  # store raw model; calibration will be applied post-hoc in production
+        calibrated = model
 
     y_pred = (y_prob >= 0.5).astype(int)
 
