@@ -126,6 +126,60 @@ def test_settle_commits():
     conn.commit.assert_called_once()
 
 
+def test_settle_queries_are_sport_scoped():
+    """All SELECTs in settle_recommendations must filter to sport='NBA'."""
+    from nba.plugins.ml.settle import settle_recommendations
+
+    # Trigger every SELECT path: 1 resolvable row -> settle -> completed-dates check -> recap.
+    recap_rows = [
+        ("Player A", "player_points", 20.0, "Over", True, 25.0, 0.10),
+    ]
+    cursor = _make_cursor(
+        rows=[
+            (1, "Player A", "player_points", 20.0, date(2026, 4, 3), 25, 5, 3, 2, 4),
+        ],
+        stale_ids=[],
+        unsettled_newly=[(date(2026, 4, 3),)],
+    )
+    cursor.fetchall.side_effect = list(cursor.fetchall.side_effect) + [recap_rows]
+    conn = MagicMock()
+    conn.cursor.return_value = cursor
+
+    with patch("nba.plugins.ml.settle.notify_picks_settled"):
+        settle_recommendations(conn)
+
+    select_sqls = [
+        c.args[0] for c in cursor.execute.call_args_list
+        if c.args and "SELECT" in str(c.args[0])
+    ]
+    # Main settle SELECT (aliased as r)
+    assert any("r.sport = 'NBA'" in sql for sql in select_sqls), \
+        "Main settle SELECT must filter by r.sport = 'NBA'"
+    # _notify_completed_dates SELECT + _send_recap SELECT (both unaliased)
+    unaliased_sport_selects = [sql for sql in select_sqls if "sport = 'NBA'" in sql and "r.sport" not in sql]
+    assert len(unaliased_sport_selects) >= 2, \
+        f"Expected 2 unaliased sport-scoped SELECTs (completed-dates + recap), got {len(unaliased_sport_selects)}"
+
+
+def test_settle_stale_recs_query_is_sport_scoped():
+    """Stale-recs SELECT must filter by sport='NBA'."""
+    from nba.plugins.ml.settle import settle_recommendations
+
+    cursor = _make_cursor(rows=[], stale_ids=[], unsettled_newly=[])
+    conn = MagicMock()
+    conn.cursor.return_value = cursor
+
+    with patch("nba.plugins.ml.settle.notify_picks_settled"):
+        settle_recommendations(conn)
+
+    stale_sqls = [
+        c.args[0] for c in cursor.execute.call_args_list
+        if c.args and "SELECT id FROM recommendations" in str(c.args[0])
+    ]
+    assert len(stale_sqls) == 1
+    assert "sport = 'NBA'" in stale_sqls[0]
+
+
 def test_settle_sends_slack_when_top10_complete():
     from nba.plugins.ml.settle import settle_recommendations
 

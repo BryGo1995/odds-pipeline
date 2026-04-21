@@ -132,14 +132,17 @@ def score(conn, game_date: str, features_dir: str = FEATURES_DIR) -> None:
     all_df["rank"] = range(1, len(all_df) + 1)
 
     with conn.cursor() as cur:
-        cur.execute("DELETE FROM recommendations WHERE game_date = %s", (game_date,))
+        cur.execute(
+            "DELETE FROM recommendations WHERE game_date = %s AND sport = 'NBA'",
+            (game_date,),
+        )
         for _, row in all_df.iterrows():
             cur.execute(
                 """
                 INSERT INTO recommendations
                     (player_name, prop_type, bookmaker, line, outcome,
-                     model_prob, implied_prob, edge, rank, model_version, game_date)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     model_prob, implied_prob, edge, rank, model_version, game_date, sport)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     row["player_name"],
@@ -153,6 +156,7 @@ def score(conn, game_date: str, features_dir: str = FEATURES_DIR) -> None:
                     int(row["rank"]),
                     str(row["model_version"]),
                     game_date,
+                    "NBA",
                 ),
             )
     conn.commit()

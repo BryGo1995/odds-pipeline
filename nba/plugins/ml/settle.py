@@ -51,6 +51,7 @@ def settle_recommendations(conn) -> None:
                AND pgl.game_date = r.game_date
             WHERE r.settled_at IS NULL
               AND r.game_date < CURRENT_DATE
+              AND r.sport = 'NBA'
             """
         )
         resolvable = cur.fetchall()
@@ -61,6 +62,7 @@ def settle_recommendations(conn) -> None:
             SELECT id FROM recommendations
             WHERE settled_at IS NULL
               AND game_date < CURRENT_DATE - INTERVAL '7 days'
+              AND sport = 'NBA'
             """
         )
         stale_ids = [row[0] for row in cur.fetchall()]
@@ -128,6 +130,7 @@ def _notify_completed_dates(conn, newly_settled_dates: set) -> None:
             FROM recommendations
             WHERE game_date = ANY(%s)
               AND rank <= 10
+              AND sport = 'NBA'
             GROUP BY game_date
             HAVING COUNT(*) FILTER (WHERE settled_at IS NULL) = 0
             """,
@@ -146,7 +149,7 @@ def _send_recap(conn, game_date: date) -> None:
             SELECT player_name, prop_type, line, outcome, actual_result,
                    actual_stat_value, edge
             FROM recommendations
-            WHERE game_date = %s AND rank <= 10
+            WHERE game_date = %s AND rank <= 10 AND sport = 'NBA'
             ORDER BY rank
             """,
             (game_date,),

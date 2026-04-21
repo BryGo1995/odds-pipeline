@@ -157,6 +157,42 @@ def test_score_allocation_redistributes_when_prop_type_empty():
     assert "player_assists" not in top_10_prop_types
 
 
+def test_score_delete_and_insert_are_sport_scoped():
+    from nba.plugins.ml.score import score
+
+    mock_conn, mock_cursor = _setup_mock_conn()
+    feature_df = _make_feature_df(5)  # 15 total rows
+
+    with patch("nba.plugins.ml.score.load_todays_features", return_value=feature_df), \
+         patch("nba.plugins.ml.score.mlflow") as mock_mlflow:
+        mock_mlflow.sklearn.load_model.side_effect = lambda uri: _mock_model(5, prob=0.6)
+        mock_client = MagicMock()
+        mock_client.get_model_version_by_alias.return_value.version = "1"
+        mock_mlflow.tracking.MlflowClient.return_value = mock_client
+
+        score(mock_conn, "2026-03-26")
+
+    # DELETE must be sport-scoped so NBA doesn't wipe MLB rows
+    mock_cursor.execute.assert_any_call(
+        "DELETE FROM recommendations WHERE game_date = %s AND sport = 'NBA'",
+        ("2026-03-26",),
+    )
+
+    # Every INSERT row tuple must end with 'NBA' (the new sport column).
+    insert_calls = [
+        c for c in mock_cursor.execute.call_args_list
+        if c.args and "INSERT" in str(c.args[0])
+    ]
+    assert len(insert_calls) == 15
+    for c in insert_calls:
+        sql = c.args[0]
+        row = c.args[1]
+        # Column list and VALUES list should both include sport.
+        assert "sport" in sql, f"INSERT SQL missing sport column: {sql}"
+        assert row[-1] == "NBA", f"INSERT row tuple should end with 'NBA', got {row[-1]!r}"
+        assert len(row) == 12, f"INSERT should now have 12 columns, got {len(row)}"
+
+
 def test_score_ranks_within_allocation_by_edge():
     from nba.plugins.ml.score import score
 
