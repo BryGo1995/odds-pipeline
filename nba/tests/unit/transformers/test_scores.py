@@ -27,23 +27,39 @@ def _make_mock_conn():
 def test_transform_scores_upserts_row():
     from nba.plugins.transformers.scores import transform_scores
     mock_conn, mock_cursor = _make_mock_conn()
+    # The transformer first SELECTs known game_ids; mock it to include our sample.
+    mock_cursor.fetchall.return_value = [("abc123",)]
     transform_scores(conn=mock_conn, raw_scores=SAMPLE_SCORES)
-    mock_cursor.execute.assert_called_once()
-    sql = mock_cursor.execute.call_args[0][0]
-    assert "INSERT INTO scores" in sql
-    assert "ON CONFLICT" in sql
+    # Two execute calls now: SELECT known game_ids, then INSERT ... ON CONFLICT.
+    assert mock_cursor.execute.call_count == 2
+    insert_sql = mock_cursor.execute.call_args_list[1][0][0]
+    assert "INSERT INTO scores" in insert_sql
+    assert "ON CONFLICT" in insert_sql
     mock_conn.commit.assert_called_once()
 
 
 def test_transform_scores_handles_null_scores():
     from nba.plugins.transformers.scores import transform_scores
     mock_conn, mock_cursor = _make_mock_conn()
+    mock_cursor.fetchall.return_value = [("abc",)]
     raw = [{"id": "abc", "completed": False, "last_update": None,
             "home_team": "Lakers", "away_team": "Celtics", "scores": None}]
     transform_scores(conn=mock_conn, raw_scores=raw)
-    args = mock_cursor.execute.call_args[0][1]
-    assert args[1] is None  # home_score
-    assert args[2] is None  # away_score
+    # call_args is the INSERT (last call); SELECT is call_args_list[0].
+    insert_args = mock_cursor.execute.call_args[0][1]
+    assert insert_args[1] is None  # home_score
+    assert insert_args[2] is None  # away_score
+
+
+def test_transform_scores_skips_unknown_game_ids():
+    """Scores for game_ids not in the games table should be skipped with a warning."""
+    from nba.plugins.transformers.scores import transform_scores
+    mock_conn, mock_cursor = _make_mock_conn()
+    mock_cursor.fetchall.return_value = []  # no known games → everything skipped
+    transform_scores(conn=mock_conn, raw_scores=SAMPLE_SCORES)
+    # Only the SELECT ran; no INSERT.
+    assert mock_cursor.execute.call_count == 1
+    assert "SELECT game_id FROM games" in mock_cursor.execute.call_args_list[0][0][0]
 
 
 def test_transform_scores_skips_empty_list():
