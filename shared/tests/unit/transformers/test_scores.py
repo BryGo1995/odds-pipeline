@@ -25,7 +25,7 @@ def _make_mock_conn():
 
 
 def test_transform_scores_upserts_row():
-    from nba.plugins.transformers.scores import transform_scores
+    from shared.plugins.transformers.scores import transform_scores
     mock_conn, mock_cursor = _make_mock_conn()
     # The transformer first SELECTs known game_ids; mock it to include our sample.
     mock_cursor.fetchall.return_value = [("abc123",)]
@@ -39,7 +39,7 @@ def test_transform_scores_upserts_row():
 
 
 def test_transform_scores_handles_null_scores():
-    from nba.plugins.transformers.scores import transform_scores
+    from shared.plugins.transformers.scores import transform_scores
     mock_conn, mock_cursor = _make_mock_conn()
     mock_cursor.fetchall.return_value = [("abc",)]
     raw = [{"id": "abc", "completed": False, "last_update": None,
@@ -53,7 +53,7 @@ def test_transform_scores_handles_null_scores():
 
 def test_transform_scores_skips_unknown_game_ids():
     """Scores for game_ids not in the games table should be skipped with a warning."""
-    from nba.plugins.transformers.scores import transform_scores
+    from shared.plugins.transformers.scores import transform_scores
     mock_conn, mock_cursor = _make_mock_conn()
     mock_cursor.fetchall.return_value = []  # no known games → everything skipped
     transform_scores(conn=mock_conn, raw_scores=SAMPLE_SCORES)
@@ -63,7 +63,7 @@ def test_transform_scores_skips_unknown_game_ids():
 
 
 def test_transform_scores_skips_empty_list():
-    from nba.plugins.transformers.scores import transform_scores
+    from shared.plugins.transformers.scores import transform_scores
     mock_conn, mock_cursor = _make_mock_conn()
     transform_scores(conn=mock_conn, raw_scores=[])
     mock_cursor.execute.assert_not_called()

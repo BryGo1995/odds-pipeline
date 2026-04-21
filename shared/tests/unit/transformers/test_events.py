@@ -21,7 +21,7 @@ def _make_mock_conn():
 
 
 def test_transform_events_upserts_game():
-    from nba.plugins.transformers.events import transform_events
+    from shared.plugins.transformers.events import transform_events
     mock_conn, mock_cursor = _make_mock_conn()
     transform_events(conn=mock_conn, raw_events=SAMPLE_EVENTS)
     mock_cursor.execute.assert_called_once()
@@ -32,7 +32,7 @@ def test_transform_events_upserts_game():
 
 
 def test_transform_events_skips_empty_list():
-    from nba.plugins.transformers.events import transform_events
+    from shared.plugins.transformers.events import transform_events
     mock_conn, mock_cursor = _make_mock_conn()
     transform_events(conn=mock_conn, raw_events=[])
     mock_cursor.execute.assert_not_called()

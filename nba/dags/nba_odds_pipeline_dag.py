@@ -14,10 +14,10 @@ from config.settings import (
 from shared.plugins.db_client import get_data_db_conn, store_raw_response
 from shared.plugins.odds_api_client import fetch_events, fetch_odds, fetch_scores, fetch_player_props
 from shared.plugins.slack_notifier import notify_failure
-from nba.plugins.transformers.events import transform_events
+from shared.plugins.transformers.events import transform_events
+from shared.plugins.transformers.scores import transform_scores
 from nba.plugins.transformers.odds import transform_odds
 from nba.plugins.transformers.player_props import transform_player_props
-from nba.plugins.transformers.scores import transform_scores
 
 
 # ---------------------------------------------------------------------------

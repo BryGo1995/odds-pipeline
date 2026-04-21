@@ -57,7 +57,7 @@ def db_conn():
 
 
 def test_transform_events_writes_to_games_table(db_conn):
-    from nba.plugins.transformers.events import transform_events
+    from shared.plugins.transformers.events import transform_events
 
     transform_events(conn=db_conn, raw_events=SAMPLE_EVENTS)
 
@@ -70,7 +70,7 @@ def test_transform_events_writes_to_games_table(db_conn):
 
 
 def test_transform_events_is_idempotent(db_conn):
-    from nba.plugins.transformers.events import transform_events
+    from shared.plugins.transformers.events import transform_events
 
     transform_events(conn=db_conn, raw_events=SAMPLE_EVENTS)
     transform_events(conn=db_conn, raw_events=SAMPLE_EVENTS)
@@ -81,7 +81,7 @@ def test_transform_events_is_idempotent(db_conn):
 
 
 def test_transform_player_props_writes_to_table(db_conn):
-    from nba.plugins.transformers.events import transform_events
+    from shared.plugins.transformers.events import transform_events
     from nba.plugins.transformers.player_props import transform_player_props
 
     # game must exist first (FK constraint)
