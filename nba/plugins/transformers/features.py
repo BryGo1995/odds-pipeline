@@ -10,6 +10,8 @@ from datetime import date
 
 import pandas as pd
 
+from shared.plugins.odds_math import american_odds_to_implied_prob
+
 PROP_STAT_MAP = {
     "player_points":           "pts",
     "player_rebounds":         "reb",
@@ -19,14 +21,6 @@ PROP_STAT_MAP = {
 }
 
 _PROP_TYPES = list(PROP_STAT_MAP.keys())
-
-
-def american_odds_to_implied_prob(price) -> float:
-    """Convert American odds (e.g. -110, +200) to implied probability."""
-    price = float(price)
-    if price > 0:
-        return 100.0 / (price + 100.0)
-    return abs(price) / (abs(price) + 100.0)
 
 
 def build_features(conn, game_date: str) -> pd.DataFrame:
