@@ -101,9 +101,13 @@ Note: `nba_stats_pipeline` has an `ExternalTaskSensor` (`wait_for_nba_odds_pipel
 
 ## Configuration
 
-Edit `config/settings.py` to control what data is fetched:
+Each sport has its own config module — edit the appropriate one to control what data is fetched:
+
+- `nba/config.py` — NBA markets, prop markets, bookmakers
+- `mlb/config.py` — MLB markets, prop markets, bookmakers
 
 ```python
+# Example (nba/config.py)
 MARKETS = ["h2h", "spreads", "totals"]  # add/remove freely
 BOOKMAKERS = ["draftkings", "fanduel", "betmgm"]        # fewer = less API quota used
 ```
