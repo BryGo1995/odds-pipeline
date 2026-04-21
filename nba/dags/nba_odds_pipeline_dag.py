@@ -8,7 +8,7 @@ import pendulum
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
-from config.settings import (
+from nba.config import (
     SPORT, REGIONS, MARKETS, PLAYER_PROP_MARKETS, BOOKMAKERS, ODDS_FORMAT, SCORES_DAYS_FROM,
 )
 from shared.plugins.db_client import get_data_db_conn, store_raw_response

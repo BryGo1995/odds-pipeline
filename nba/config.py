@@ -1,4 +1,5 @@
-# config/settings.py
+# nba/config.py
+# NBA-specific configuration for odds-pipeline.
 
 SPORT = "basketball_nba"
 

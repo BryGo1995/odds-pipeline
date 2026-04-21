@@ -7,7 +7,7 @@ from airflow import DAG
 from airflow.models.param import Param
 from airflow.operators.python import PythonOperator
 
-from config.settings import SPORT, REGIONS, MARKETS, BOOKMAKERS
+from nba.config import SPORT, REGIONS, MARKETS, BOOKMAKERS
 from shared.plugins.db_client import get_data_db_conn, store_raw_response
 from shared.plugins.odds_api_client import fetch_events, fetch_odds, fetch_scores
 from shared.plugins.transformers.events import transform_events
