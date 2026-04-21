@@ -37,6 +37,9 @@ CREATE TABLE IF NOT EXISTS odds (
 CREATE INDEX IF NOT EXISTS idx_odds_game_id   ON odds(game_id);
 CREATE INDEX IF NOT EXISTS idx_odds_bookmaker ON odds(bookmaker);
 
+-- nba_player_id FK to players(player_id) is added at the bottom of this
+-- file via ALTER TABLE — `players` is defined later, so inline FK would
+-- fail on fresh DB initialization.
 CREATE TABLE IF NOT EXISTS player_props (
     id              SERIAL PRIMARY KEY,
     game_id         VARCHAR(100) REFERENCES games(game_id),
@@ -46,7 +49,7 @@ CREATE TABLE IF NOT EXISTS player_props (
     outcome         VARCHAR(20),
     price           NUMERIC(10, 2),
     point           NUMERIC(10, 2),
-    nba_player_id   INT REFERENCES players(player_id),
+    nba_player_id   INT,
     last_update     TIMESTAMP,
     fetched_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -148,3 +151,17 @@ CREATE TABLE IF NOT EXISTS player_name_mappings (
 
 CREATE INDEX IF NOT EXISTS idx_games_nba_game_id       ON games (nba_game_id);
 CREATE INDEX IF NOT EXISTS idx_player_props_nba_player ON player_props (nba_player_id);
+
+-- Deferred FK: player_props.nba_player_id → players(player_id). Applied
+-- here (after `players` is created) so init_schema.sql works on a fresh
+-- database volume. Wrapped in DO block so re-runs are idempotent.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'player_props_nba_player_id_fkey'
+    ) THEN
+        ALTER TABLE player_props
+            ADD CONSTRAINT player_props_nba_player_id_fkey
+            FOREIGN KEY (nba_player_id) REFERENCES players(player_id);
+    END IF;
+END$$;

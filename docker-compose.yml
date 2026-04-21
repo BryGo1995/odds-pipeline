@@ -20,15 +20,17 @@ x-airflow-common:
     DATA_DB_HOST: data-postgres
     DATA_DB_PORT: 5432
     PYTHONPATH: /opt/airflow
-    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/nba/dags
+    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags_all
     AIRFLOW__WEBSERVER__COOKIE_NAME: odds_session
     MLFLOW_TRACKING_URI: http://mlflow:5000
     FEATURES_DIR: /data/features
   volumes:
     - ./nba:/opt/airflow/nba
+    - ./mlb:/opt/airflow/mlb
     - ./shared:/opt/airflow/shared
-    - ./config:/opt/airflow/config
     - ./logs:/opt/airflow/logs
+    - ./nba/dags:/opt/airflow/dags_all/nba
+    - ./mlb/dags:/opt/airflow/dags_all/mlb
     - features-data:/data/features
   depends_on:
     airflow-postgres:
