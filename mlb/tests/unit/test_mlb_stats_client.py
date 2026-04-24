@@ -226,3 +226,205 @@ def test_fetch_players_free_agent_has_null_team():
         result = fetch_players(season="2026", delay_seconds=0)
     assert len(result) == 1
     assert result[0]["team_id"] is None
+
+
+# --- fetch_batter_game_logs ---
+
+def _schedule_fixture(games_by_date):
+    """games_by_date: {date_str: [game_dict, ...]}"""
+    return {"dates": [
+        {"date": d, "games": g} for d, g in games_by_date.items()
+    ]}
+
+
+def _game(game_pk, status, home_id, home_abbr, away_id, away_abbr):
+    return {
+        "gamePk": game_pk,
+        "status": {"abstractGameState": status},
+        "teams": {
+            "home": {"team": {"id": home_id, "abbreviation": home_abbr}},
+            "away": {"team": {"id": away_id, "abbreviation": away_abbr}},
+        },
+    }
+
+
+def _boxscore_fixture(home_team_id, away_team_id, home_batters, away_batters):
+    """home_batters / away_batters: list of dicts like
+    {"id": 660271, "pa": 4, "ab": 3, "h": 1, ...}
+    """
+    def _player_entry(b):
+        return {
+            "person": {"id": b["id"]},
+            "stats": {"batting": {
+                "plateAppearances": b["pa"],
+                "atBats": b.get("ab", 0),
+                "hits": b.get("h", 0),
+                "doubles": b.get("2b", 0),
+                "triples": b.get("3b", 0),
+                "homeRuns": b.get("hr", 0),
+                "rbi": b.get("rbi", 0),
+                "runs": b.get("r", 0),
+                "baseOnBalls": b.get("bb", 0),
+                "strikeOuts": b.get("k", 0),
+                "stolenBases": b.get("sb", 0),
+                "totalBases": b.get("tb", 0),
+            }},
+        }
+    return {"teams": {
+        "home": {
+            "team": {"id": home_team_id},
+            "players": {f"ID{b['id']}": _player_entry(b) for b in home_batters},
+        },
+        "away": {
+            "team": {"id": away_team_id},
+            "players": {f"ID{b['id']}": _player_entry(b) for b in away_batters},
+        },
+    }}
+
+
+def test_fetch_batter_game_logs_single_game():
+    from mlb.plugins.mlb_stats_client import fetch_batter_game_logs
+
+    schedule = _schedule_fixture({"2026-04-22": [
+        _game(745123, "Final", home_id=136, home_abbr="SEA",
+              away_id=108, away_abbr="LAA"),
+    ]})
+    boxscore = _boxscore_fixture(
+        home_team_id=136, away_team_id=108,
+        home_batters=[{"id": 1, "pa": 4, "ab": 3, "h": 2, "tb": 3, "rbi": 1}],
+        away_batters=[{"id": 2, "pa": 3, "ab": 3, "h": 1, "tb": 1}],
+    )
+
+    with patch("mlb.plugins.mlb_stats_client.requests.get",
+               side_effect=[_mock_response(200, schedule),
+                            _mock_response(200, boxscore)]), \
+         patch("mlb.plugins.mlb_stats_client.time.sleep"):
+        result = fetch_batter_game_logs("2026-04-22", "2026-04-22", delay_seconds=0)
+
+    assert len(result) == 2
+    home_row = next(r for r in result if r["team_id"] == 136)
+    away_row = next(r for r in result if r["team_id"] == 108)
+    assert home_row["mlb_game_pk"] == "745123"
+    assert home_row["opponent_team_id"] == 108
+    assert home_row["matchup"] == "LAA @ SEA"
+    assert home_row["season"] == "2026"
+    assert home_row["game_date"] == "2026-04-22"
+    assert home_row["plate_appearances"] == 4
+    assert home_row["hits"] == 2
+    assert home_row["total_bases"] == 3
+    assert away_row["opponent_team_id"] == 136
+    assert away_row["matchup"] == "LAA @ SEA"
+
+
+def test_fetch_batter_game_logs_skips_non_final_games():
+    from mlb.plugins.mlb_stats_client import fetch_batter_game_logs
+
+    schedule = _schedule_fixture({"2026-04-22": [
+        _game(100, "Final",       home_id=1, home_abbr="AAA", away_id=2, away_abbr="BBB"),
+        _game(200, "Preview",     home_id=1, home_abbr="AAA", away_id=2, away_abbr="BBB"),
+        _game(300, "Live",        home_id=1, home_abbr="AAA", away_id=2, away_abbr="BBB"),
+    ]})
+    final_box = _boxscore_fixture(
+        home_team_id=1, away_team_id=2,
+        home_batters=[{"id": 10, "pa": 4, "h": 1}],
+        away_batters=[],
+    )
+
+    with patch("mlb.plugins.mlb_stats_client.requests.get",
+               side_effect=[_mock_response(200, schedule),
+                            _mock_response(200, final_box)]) as mock_get, \
+         patch("mlb.plugins.mlb_stats_client.time.sleep"):
+        result = fetch_batter_game_logs("2026-04-22", "2026-04-22", delay_seconds=0)
+
+    # Only the Final boxscore was fetched (1 schedule + 1 boxscore = 2 calls)
+    assert mock_get.call_count == 2
+    assert len(result) == 1
+    assert result[0]["mlb_game_pk"] == "100"
+
+
+def test_fetch_batter_game_logs_excludes_bench_players():
+    from mlb.plugins.mlb_stats_client import fetch_batter_game_logs
+
+    schedule = _schedule_fixture({"2026-04-22": [
+        _game(100, "Final", home_id=1, home_abbr="AAA", away_id=2, away_abbr="BBB"),
+    ]})
+    box = _boxscore_fixture(
+        home_team_id=1, away_team_id=2,
+        home_batters=[
+            {"id": 10, "pa": 4, "h": 1},
+            {"id": 11, "pa": 0},  # bench — must be filtered
+        ],
+        away_batters=[],
+    )
+
+    with patch("mlb.plugins.mlb_stats_client.requests.get",
+               side_effect=[_mock_response(200, schedule),
+                            _mock_response(200, box)]), \
+         patch("mlb.plugins.mlb_stats_client.time.sleep"):
+        result = fetch_batter_game_logs("2026-04-22", "2026-04-22", delay_seconds=0)
+
+    assert len(result) == 1
+    assert result[0]["player_id"] == 10
+
+
+def test_fetch_batter_game_logs_skips_failed_boxscore(caplog):
+    from mlb.plugins.mlb_stats_client import fetch_batter_game_logs
+
+    schedule = _schedule_fixture({"2026-04-22": [
+        _game(100, "Final", home_id=1, home_abbr="AAA", away_id=2, away_abbr="BBB"),
+        _game(200, "Final", home_id=3, home_abbr="CCC", away_id=4, away_abbr="DDD"),
+    ]})
+    good_box = _boxscore_fixture(
+        home_team_id=3, away_team_id=4,
+        home_batters=[{"id": 50, "pa": 4, "h": 1}],
+        away_batters=[],
+    )
+    # First boxscore fails with 500 (will retry 3x then raise); second succeeds.
+    responses = [
+        _mock_response(200, schedule),
+        _mock_response(500), _mock_response(500), _mock_response(500),
+        _mock_response(200, good_box),
+    ]
+
+    with patch("mlb.plugins.mlb_stats_client.requests.get", side_effect=responses), \
+         patch("mlb.plugins.mlb_stats_client.time.sleep"), \
+         caplog.at_level("WARNING"):
+        result = fetch_batter_game_logs("2026-04-22", "2026-04-22", delay_seconds=0)
+
+    assert len(result) == 1
+    assert result[0]["player_id"] == 50
+    assert any("100" in rec.message for rec in caplog.records)
+
+
+def test_fetch_batter_game_logs_raises_when_all_boxscores_fail():
+    from mlb.plugins.mlb_stats_client import fetch_batter_game_logs
+    import pytest as _pytest
+
+    schedule = _schedule_fixture({"2026-04-22": [
+        _game(100, "Final", home_id=1, home_abbr="AAA", away_id=2, away_abbr="BBB"),
+    ]})
+    # Schedule succeeds, then boxscore fails all 3 retries.
+    responses = [
+        _mock_response(200, schedule),
+        _mock_response(500), _mock_response(500), _mock_response(500),
+    ]
+    with patch("mlb.plugins.mlb_stats_client.requests.get", side_effect=responses), \
+         patch("mlb.plugins.mlb_stats_client.time.sleep"):
+        with _pytest.raises(ValueError, match="All boxscore fetches failed"):
+            fetch_batter_game_logs("2026-04-22", "2026-04-22", delay_seconds=0)
+
+
+def test_fetch_batter_game_logs_accepts_date_objects():
+    from mlb.plugins.mlb_stats_client import fetch_batter_game_logs
+    from datetime import date as _date
+
+    schedule = _schedule_fixture({})  # no dates → no games
+    with patch("mlb.plugins.mlb_stats_client.requests.get",
+               return_value=_mock_response(200, schedule)) as mock_get, \
+         patch("mlb.plugins.mlb_stats_client.time.sleep"):
+        result = fetch_batter_game_logs(_date(2026, 4, 22), _date(2026, 4, 23),
+                                        delay_seconds=0)
+    assert result == []
+    params = mock_get.call_args.kwargs["params"]
+    assert params["startDate"] == "2026-04-22"
+    assert params["endDate"] == "2026-04-23"
