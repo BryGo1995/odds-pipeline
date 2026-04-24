@@ -89,3 +89,51 @@ def test_get_retries_on_timeout():
          patch("mlb.plugins.mlb_stats_client.time.sleep"):
         result = _get("/x", {}, delay_seconds=0)
     assert result == {"ok": True}
+
+
+# --- fetch_teams ---
+
+def test_fetch_teams_maps_fields():
+    from mlb.plugins.mlb_stats_client import fetch_teams
+    fixture = {"teams": [{
+        "id": 108,
+        "name": "Los Angeles Angels",
+        "abbreviation": "LAA",
+        "league": {"id": 103, "name": "American League"},
+        "division": {"id": 200, "name": "American League West"},
+    }]}
+    with patch("mlb.plugins.mlb_stats_client.requests.get",
+               return_value=_mock_response(200, fixture)) as mock_get, \
+         patch("mlb.plugins.mlb_stats_client.time.sleep"):
+        result = fetch_teams(delay_seconds=0)
+
+    assert result == [{
+        "team_id": 108,
+        "full_name": "Los Angeles Angels",
+        "abbreviation": "LAA",
+        "league": "American League",
+        "division": "American League West",
+    }]
+    # Ensure correct endpoint + params
+    call = mock_get.call_args
+    assert call.args[0] == "https://statsapi.mlb.com/api/v1/teams"
+    assert call.kwargs["params"] == {"sportId": 1, "activeStatus": "Y"}
+
+
+def test_fetch_teams_handles_missing_division():
+    from mlb.plugins.mlb_stats_client import fetch_teams
+    fixture = {"teams": [{
+        "id": 999,
+        "name": "Some Team",
+        "abbreviation": "XXX",
+        "league": {"name": "American League"},
+        # no 'division' key
+    }]}
+    with patch("mlb.plugins.mlb_stats_client.requests.get",
+               return_value=_mock_response(200, fixture)), \
+         patch("mlb.plugins.mlb_stats_client.time.sleep"):
+        result = fetch_teams(delay_seconds=0)
+
+    assert len(result) == 1
+    assert result[0]["division"] is None
+    assert result[0]["league"] == "American League"

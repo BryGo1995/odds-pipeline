@@ -46,3 +46,22 @@ def _get(path, params, delay_seconds):
             time.sleep(backoff)
     # unreachable — loop either returns or raises
     raise RuntimeError("_get exhausted retries without returning or raising")
+
+
+def fetch_teams(delay_seconds=0.2):
+    """Fetch active MLB teams. Returns list of dicts matching mlb_teams columns."""
+    data = _get(
+        "/teams",
+        {"sportId": _SPORT_ID, "activeStatus": "Y"},
+        delay_seconds,
+    )
+    return [
+        {
+            "team_id": t["id"],
+            "full_name": t["name"],
+            "abbreviation": t["abbreviation"],
+            "league": (t.get("league") or {}).get("name"),
+            "division": (t.get("division") or {}).get("name"),
+        }
+        for t in data.get("teams", [])
+    ]
