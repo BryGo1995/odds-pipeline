@@ -137,3 +137,92 @@ def test_fetch_teams_handles_missing_division():
     assert len(result) == 1
     assert result[0]["division"] is None
     assert result[0]["league"] == "American League"
+
+
+# --- fetch_players ---
+
+def test_fetch_players_active_only_appends_param():
+    from mlb.plugins.mlb_stats_client import fetch_players
+    with patch("mlb.plugins.mlb_stats_client.requests.get",
+               return_value=_mock_response(200, {"people": []})) as mock_get, \
+         patch("mlb.plugins.mlb_stats_client.time.sleep"):
+        fetch_players(season="2026", active_only=True, delay_seconds=0)
+    assert mock_get.call_args.kwargs["params"] == {
+        "season": "2026", "activeStatus": "Y"
+    }
+
+    with patch("mlb.plugins.mlb_stats_client.requests.get",
+               return_value=_mock_response(200, {"people": []})) as mock_get, \
+         patch("mlb.plugins.mlb_stats_client.time.sleep"):
+        fetch_players(season="2026", active_only=False, delay_seconds=0)
+    assert mock_get.call_args.kwargs["params"] == {"season": "2026"}
+
+
+def test_fetch_players_maps_fields():
+    from mlb.plugins.mlb_stats_client import fetch_players
+    fixture = {"people": [
+        {
+            "id": 660271,
+            "fullName": "Shohei Ohtani",
+            "primaryPosition": {"abbreviation": "DH"},
+            "batSide": {"code": "L"},
+            "pitchHand": {"code": "R"},
+            "currentTeam": {"id": 119},
+            "active": True,
+        },
+        {
+            "id": 592450,
+            "fullName": "Gerrit Cole",
+            "primaryPosition": {"abbreviation": "P"},
+            "batSide": {"code": "R"},
+            "pitchHand": {"code": "R"},
+            "currentTeam": {"id": 147},
+            "active": True,
+        },
+    ]}
+    with patch("mlb.plugins.mlb_stats_client.requests.get",
+               return_value=_mock_response(200, fixture)), \
+         patch("mlb.plugins.mlb_stats_client.time.sleep"):
+        result = fetch_players(season="2026", delay_seconds=0)
+
+    assert result == [
+        {
+            "player_id": 660271,
+            "full_name": "Shohei Ohtani",
+            "position": "DH",
+            "bats": "L",
+            "throws": "R",
+            "team_id": 119,
+            "team_abbreviation": None,
+            "is_active": True,
+        },
+        {
+            "player_id": 592450,
+            "full_name": "Gerrit Cole",
+            "position": "P",
+            "bats": "R",
+            "throws": "R",
+            "team_id": 147,
+            "team_abbreviation": None,
+            "is_active": True,
+        },
+    ]
+
+
+def test_fetch_players_free_agent_has_null_team():
+    from mlb.plugins.mlb_stats_client import fetch_players
+    fixture = {"people": [{
+        "id": 100,
+        "fullName": "Free Agent",
+        "primaryPosition": {"abbreviation": "OF"},
+        "batSide": {"code": "R"},
+        "pitchHand": {"code": "R"},
+        # no 'currentTeam' key
+        "active": True,
+    }]}
+    with patch("mlb.plugins.mlb_stats_client.requests.get",
+               return_value=_mock_response(200, fixture)), \
+         patch("mlb.plugins.mlb_stats_client.time.sleep"):
+        result = fetch_players(season="2026", delay_seconds=0)
+    assert len(result) == 1
+    assert result[0]["team_id"] is None

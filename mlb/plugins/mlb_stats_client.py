@@ -65,3 +65,30 @@ def fetch_teams(delay_seconds=0.2):
         }
         for t in data.get("teams", [])
     ]
+
+
+def fetch_players(season, active_only=True, delay_seconds=0.2):
+    """Fetch MLB players for a season. Returns list of dicts matching mlb_players columns.
+
+    team_abbreviation is always None at this layer — transformers resolve it via
+    the mlb_teams join.
+    """
+    params = {"season": season}
+    if active_only:
+        params["activeStatus"] = "Y"
+    data = _get("/sports/1/players", params, delay_seconds)
+
+    players = []
+    for p in data.get("people", []):
+        current_team = p.get("currentTeam") or {}
+        players.append({
+            "player_id": p["id"],
+            "full_name": p["fullName"],
+            "position": (p.get("primaryPosition") or {}).get("abbreviation"),
+            "bats": (p.get("batSide") or {}).get("code"),
+            "throws": (p.get("pitchHand") or {}).get("code"),
+            "team_id": current_team.get("id"),
+            "team_abbreviation": None,
+            "is_active": bool(p.get("active", False)),
+        })
+    return players
