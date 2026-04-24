@@ -1,6 +1,7 @@
 # mlb/tests/unit/test_mlb_stats_client.py
 from unittest.mock import MagicMock, patch
 
+import pytest
 import requests
 
 
@@ -66,8 +67,7 @@ def test_get_exhausts_retries_and_raises():
     with patch("mlb.plugins.mlb_stats_client.requests.get",
                return_value=_mock_response(429)), \
          patch("mlb.plugins.mlb_stats_client.time.sleep"):
-        import pytest as _pytest
-        with _pytest.raises(requests.HTTPError):
+        with pytest.raises(requests.HTTPError):
             _get("/x", {}, delay_seconds=0)
 
 
@@ -76,8 +76,7 @@ def test_get_does_not_retry_on_404():
     with patch("mlb.plugins.mlb_stats_client.requests.get",
                return_value=_mock_response(404)) as mock_get, \
          patch("mlb.plugins.mlb_stats_client.time.sleep"):
-        import pytest as _pytest
-        with _pytest.raises(requests.HTTPError):
+        with pytest.raises(requests.HTTPError):
             _get("/x", {}, delay_seconds=0)
     assert mock_get.call_count == 1
 
@@ -398,7 +397,6 @@ def test_fetch_batter_game_logs_skips_failed_boxscore(caplog):
 
 def test_fetch_batter_game_logs_raises_when_all_boxscores_fail():
     from mlb.plugins.mlb_stats_client import fetch_batter_game_logs
-    import pytest as _pytest
 
     schedule = _schedule_fixture({"2026-04-22": [
         _game(100, "Final", home_id=1, home_abbr="AAA", away_id=2, away_abbr="BBB"),
@@ -410,7 +408,7 @@ def test_fetch_batter_game_logs_raises_when_all_boxscores_fail():
     ]
     with patch("mlb.plugins.mlb_stats_client.requests.get", side_effect=responses), \
          patch("mlb.plugins.mlb_stats_client.time.sleep"):
-        with _pytest.raises(ValueError, match="All boxscore fetches failed"):
+        with pytest.raises(ValueError, match="All boxscore fetches failed"):
             fetch_batter_game_logs("2026-04-22", "2026-04-22", delay_seconds=0)
 
 

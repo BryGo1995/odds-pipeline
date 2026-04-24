@@ -76,7 +76,7 @@ def fetch_players(season, active_only=True, delay_seconds=0.2):
     params = {"season": season}
     if active_only:
         params["activeStatus"] = "Y"
-    data = _get("/sports/1/players", params, delay_seconds)
+    data = _get(f"/sports/{_SPORT_ID}/players", params, delay_seconds)
 
     players = []
     for p in data.get("people", []):
