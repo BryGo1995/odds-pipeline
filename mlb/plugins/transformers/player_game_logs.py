@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 def transform_player_game_logs(conn, raw_logs):
     """Upsert MLB batter game-log rows into mlb_player_game_logs.
 
@@ -48,7 +53,11 @@ def transform_player_game_logs(conn, raw_logs):
                     ),
                 )
                 cur.execute("RELEASE SAVEPOINT pgl_row")
-            except Exception:
+            except Exception as exc:
+                logger.warning(
+                    "game_log row failed: player_id=%s mlb_game_pk=%s: %s",
+                    log.get("player_id"), log.get("mlb_game_pk"), exc,
+                )
                 cur.execute("ROLLBACK TO SAVEPOINT pgl_row")
                 cur.execute("RELEASE SAVEPOINT pgl_row")
     conn.commit()
