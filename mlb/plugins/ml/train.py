@@ -28,8 +28,6 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
-from sklearn.preprocessing import LabelEncoder
-
 from mlb.plugins.transformers.features import MLB_PROP_STAT_MAP
 
 PER_PROP_FEATURES = [
@@ -55,13 +53,6 @@ _MIN_ROWS = {
 }
 
 
-def _make_label_encoder() -> LabelEncoder:
-    """Deterministic encoder fitted on the full known prop type list."""
-    le = LabelEncoder()
-    le.fit(sorted(MLB_PROP_STAT_MAP.keys()))
-    return le
-
-
 def load_training_data(features_dir: str) -> pd.DataFrame:
     """Load all MLB Parquet feature files; return rows with actual_result populated."""
     conn = duckdb.connect()
@@ -75,10 +66,7 @@ def load_training_data(features_dir: str) -> pd.DataFrame:
 
 
 def prepare_features(df: pd.DataFrame, features: list[str] | None = None) -> tuple:
-    """
-    Encode categorical features and fill NAs. Returns (X, y, label_encoder).
-    """
-    le = _make_label_encoder()
+    """Fill numeric NAs and select feature columns. Returns (X, y)."""
     df = df.copy()
     df["is_home"] = df["is_home"].astype(object).fillna(0.5).astype(float)
     for col in ["rolling_avg_5g", "rolling_avg_10g", "rolling_avg_20g",
@@ -92,7 +80,7 @@ def prepare_features(df: pd.DataFrame, features: list[str] | None = None) -> tup
         y = df["actual_result"].astype(int)
     else:
         y = None
-    return X, y, le
+    return X, y
 
 
 class _CalibratedModel:
@@ -155,8 +143,8 @@ def train_model(features_dir: str = FEATURES_DIR, prop_type: str | None = None) 
     if val_df.empty:
         raise ValueError("Validation set is empty — add more recent data before training")
 
-    X_train, y_train, _ = prepare_features(train_df, features=features)
-    X_val,   y_val,   _ = prepare_features(val_df, features=features)
+    X_train, y_train = prepare_features(train_df, features=features)
+    X_val,   y_val   = prepare_features(val_df, features=features)
 
     model = xgb.XGBClassifier(
         n_estimators=300,

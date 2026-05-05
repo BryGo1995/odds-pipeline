@@ -39,7 +39,7 @@ def _make_labeled_df(n_per_prop: int = 30) -> pd.DataFrame:
 def test_prepare_features_returns_per_prop_columns():
     from mlb.plugins.ml.train import prepare_features, PER_PROP_FEATURES
     df = _make_labeled_df(n_per_prop=10)
-    X, y, _ = prepare_features(df, features=PER_PROP_FEATURES)
+    X, y = prepare_features(df, features=PER_PROP_FEATURES)
     assert list(X.columns) == PER_PROP_FEATURES
     assert len(y) == len(df)
     assert y.dtype.kind in ("i", "u")  # int
@@ -49,7 +49,7 @@ def test_prepare_features_fills_numeric_nas_with_median():
     from mlb.plugins.ml.train import prepare_features, PER_PROP_FEATURES
     df = _make_labeled_df(n_per_prop=10)
     df.loc[0, "rolling_avg_5g"] = None
-    X, _, _ = prepare_features(df, features=PER_PROP_FEATURES)
+    X, _ = prepare_features(df, features=PER_PROP_FEATURES)
     assert pd.notna(X["rolling_avg_5g"].iloc[0])
 
 
@@ -71,7 +71,7 @@ def test_train_model_home_runs_min_rows_threshold_is_100():
             train_model(prop_type="batter_home_runs")
 
 
-def test_train_model_registers_with_mlb_prefix(tmp_path):
+def test_train_model_registers_with_mlb_prefix():
     from mlb.plugins.ml.train import train_model
     df = _make_labeled_df(n_per_prop=60)
 
@@ -111,10 +111,12 @@ def test_train_model_tags_promotion_candidate_when_baseline():
 def test_train_all_models_skips_under_min_rows(caplog):
     from mlb.plugins.ml.train import train_all_models
     df = _make_labeled_df(n_per_prop=10)  # all under 50
+    caplog.set_level("WARNING", logger="mlb.plugins.ml.train")
     with patch("mlb.plugins.ml.train.load_training_data", return_value=df), \
          patch("mlb.plugins.ml.train.train_model", side_effect=ValueError("Insufficient training data: 10 labeled rows")):
         results = train_all_models()
     assert results == {}
+    assert "Skipping" in caplog.text
 
 
 def test_train_all_models_iterates_three_mlb_prop_types():
