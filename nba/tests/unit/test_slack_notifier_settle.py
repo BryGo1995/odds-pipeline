@@ -16,15 +16,17 @@ def test_notify_picks_settled_posts_to_slack():
     from shared.plugins.slack_notifier import notify_picks_settled
     with patch("shared.plugins.slack_notifier._WEBHOOK_URL", "https://hooks.slack.com/test"), \
          patch("shared.plugins.slack_notifier._post") as mock_post:
-        notify_picks_settled(_GAME_DATE, _RESULTS)
+        notify_picks_settled(_GAME_DATE, _RESULTS, sport="nba")
     mock_post.assert_called_once()
+    text = mock_post.call_args.args[0]
+    assert "[NBA]" in text
 
 
 def test_notify_picks_settled_includes_hit_rate():
     from shared.plugins.slack_notifier import notify_picks_settled
     with patch("shared.plugins.slack_notifier._WEBHOOK_URL", "https://hooks.slack.com/test"), \
          patch("shared.plugins.slack_notifier._post") as mock_post:
-        notify_picks_settled(_GAME_DATE, _RESULTS)
+        notify_picks_settled(_GAME_DATE, _RESULTS, sport="nba")
     text = mock_post.call_args.args[0]
     assert "2/3" in text
     assert "67%" in text or "66%" in text
@@ -34,7 +36,7 @@ def test_notify_picks_settled_includes_player_names():
     from shared.plugins.slack_notifier import notify_picks_settled
     with patch("shared.plugins.slack_notifier._WEBHOOK_URL", "https://hooks.slack.com/test"), \
          patch("shared.plugins.slack_notifier._post") as mock_post:
-        notify_picks_settled(_GAME_DATE, _RESULTS)
+        notify_picks_settled(_GAME_DATE, _RESULTS, sport="nba")
     text = mock_post.call_args.args[0]
     assert "LeBron James" in text
     assert "Jayson Tatum" in text
@@ -44,7 +46,7 @@ def test_notify_picks_settled_marks_hits_and_misses():
     from shared.plugins.slack_notifier import notify_picks_settled
     with patch("shared.plugins.slack_notifier._WEBHOOK_URL", "https://hooks.slack.com/test"), \
          patch("shared.plugins.slack_notifier._post") as mock_post:
-        notify_picks_settled(_GAME_DATE, _RESULTS)
+        notify_picks_settled(_GAME_DATE, _RESULTS, sport="nba")
     text = mock_post.call_args.args[0]
     assert "✅" in text
     assert "❌" in text
@@ -54,7 +56,7 @@ def test_notify_picks_settled_skips_when_no_webhook():
     from shared.plugins.slack_notifier import notify_picks_settled
     with patch("shared.plugins.slack_notifier._WEBHOOK_URL", None), \
          patch("shared.plugins.slack_notifier._post") as mock_post:
-        notify_picks_settled(_GAME_DATE, _RESULTS)
+        notify_picks_settled(_GAME_DATE, _RESULTS, sport="nba")
     mock_post.assert_not_called()
 
 
@@ -66,7 +68,7 @@ def test_notify_picks_settled_shows_unresolvable_as_unknown():
     ]
     with patch("shared.plugins.slack_notifier._WEBHOOK_URL", "https://hooks.slack.com/test"), \
          patch("shared.plugins.slack_notifier._post") as mock_post:
-        notify_picks_settled(_GAME_DATE, results_with_unknown)
+        notify_picks_settled(_GAME_DATE, results_with_unknown, sport="nba")
     text = mock_post.call_args.args[0]
     assert "DNP Player" in text
-    assert "\u2014" in text  # unresolvable shown with dash
+    assert "—" in text  # unresolvable shown with dash

@@ -169,4 +169,4 @@ def _send_recap(conn, game_date: date) -> None:
         for r in rows
     ]
     if notify_picks_settled is not None:
-        notify_picks_settled(game_date, results)
+        notify_picks_settled(game_date, results, sport="nba")
