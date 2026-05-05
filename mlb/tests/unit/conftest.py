@@ -17,6 +17,17 @@ class _SmartOperatorMock:
         op = MagicMock()
         for k, v in kwargs.items():
             setattr(op, k, v)
+        op.upstream_list = []
+        op.downstream_list = []
+
+        def _rshift(other):
+            others = other if isinstance(other, list) else [other]
+            for o in others:
+                op.downstream_list.append(o)
+                o.upstream_list.append(op)
+            return other
+
+        op.__rshift__ = MagicMock(side_effect=_rshift)
         if _SmartDAGMock._current is not None:
             _SmartDAGMock._current.tasks.append(op)
         return op
@@ -40,6 +51,10 @@ class _SmartDAGMock:
         for key, value in kwargs.items():
             setattr(dag_instance, key, value)
         dag_instance.tasks = []
+        dag_instance.get_task = lambda task_id: next(
+            (t for t in dag_instance.tasks if t.task_id == task_id),
+            MagicMock(task_id=task_id, upstream_list=[], downstream_list=[]),
+        )
 
         def _enter(*_):
             _SmartDAGMock._current = dag_instance
