@@ -13,8 +13,14 @@ from unittest.mock import MagicMock
 class _SmartDAGMock:
     """A mock DAG factory that captures kwargs and supports context manager protocol."""
 
-    def __call__(self, **kwargs):
-        """Create a DAG mock that stores the kwargs as attributes."""
+    def __call__(self, *args, **kwargs):
+        """Create a DAG mock that stores the kwargs as attributes.
+
+        Accepts dag_id as the first positional argument (mirroring real
+        airflow.DAG) or as a keyword argument.
+        """
+        if args:
+            kwargs.setdefault("dag_id", args[0])
         dag_instance = MagicMock()
         for key, value in kwargs.items():
             setattr(dag_instance, key, value)
@@ -24,20 +30,34 @@ class _SmartDAGMock:
 
 
 def _stub_airflow():
-    """Insert minimal stubs for airflow into sys.modules."""
-    if "airflow" in sys.modules:
+    """Insert minimal stubs for airflow into sys.modules.
+
+    If another conftest already stubbed airflow with a plain MagicMock,
+    upgrade the .DAG attribute to _SmartDAGMock so MLB DAG tests can
+    introspect dag_id, tags, schedule_interval, etc.
+
+    If real Airflow is installed (not a MagicMock), leave it alone.
+    """
+    existing = sys.modules.get("airflow")
+
+    if existing is not None and not isinstance(existing, MagicMock):
         return  # real Airflow is installed — leave it alone
 
-    airflow_mock = MagicMock()
-    airflow_mock.DAG = _SmartDAGMock()
+    if existing is None:
+        airflow_mock = MagicMock()
+        sys.modules["airflow"] = airflow_mock
+        sys.modules.setdefault("airflow.models", MagicMock())
+        sys.modules.setdefault("airflow.models.param", MagicMock())
+        sys.modules.setdefault("airflow.operators", MagicMock())
+        sys.modules.setdefault("airflow.operators.python", MagicMock())
+        sys.modules.setdefault("airflow.sensors", MagicMock())
+        sys.modules.setdefault("airflow.sensors.external_task", MagicMock())
+    else:
+        airflow_mock = existing
 
-    sys.modules["airflow"] = airflow_mock
-    sys.modules.setdefault("airflow.models", MagicMock())
-    sys.modules.setdefault("airflow.models.param", MagicMock())
-    sys.modules.setdefault("airflow.operators", MagicMock())
-    sys.modules.setdefault("airflow.operators.python", MagicMock())
-    sys.modules.setdefault("airflow.sensors", MagicMock())
-    sys.modules.setdefault("airflow.sensors.external_task", MagicMock())
+    # Upgrade .DAG to _SmartDAGMock if not already set
+    if not isinstance(airflow_mock.DAG, _SmartDAGMock):
+        airflow_mock.DAG = _SmartDAGMock()
 
 
 def _stub_pendulum():
