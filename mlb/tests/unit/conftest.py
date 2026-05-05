@@ -10,12 +10,28 @@ import sys
 from unittest.mock import MagicMock
 
 
+class _SmartDAGMock:
+    """A mock DAG factory that captures kwargs and supports context manager protocol."""
+
+    def __call__(self, **kwargs):
+        """Create a DAG mock that stores the kwargs as attributes."""
+        dag_instance = MagicMock()
+        for key, value in kwargs.items():
+            setattr(dag_instance, key, value)
+        dag_instance.__enter__ = MagicMock(return_value=dag_instance)
+        dag_instance.__exit__ = MagicMock(return_value=False)
+        return dag_instance
+
+
 def _stub_airflow():
     """Insert minimal stubs for airflow into sys.modules."""
     if "airflow" in sys.modules:
         return  # real Airflow is installed — leave it alone
 
-    sys.modules.setdefault("airflow", MagicMock())
+    airflow_mock = MagicMock()
+    airflow_mock.DAG = _SmartDAGMock()
+
+    sys.modules["airflow"] = airflow_mock
     sys.modules.setdefault("airflow.models", MagicMock())
     sys.modules.setdefault("airflow.models.param", MagicMock())
     sys.modules.setdefault("airflow.operators", MagicMock())
