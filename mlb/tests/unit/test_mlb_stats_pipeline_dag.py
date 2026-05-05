@@ -23,6 +23,7 @@ def test_dag_has_expected_tasks():
         "fetch_teams", "fetch_players", "fetch_batter_game_logs",
         "transform_teams", "transform_players", "transform_player_game_logs",
         "resolve_player_ids",
+        "settle_recommendations",
     }
 
 
@@ -53,6 +54,11 @@ def test_dag_task_chain():
     # transform_player_game_logs → resolve_player_ids
     assert "resolve_player_ids" in {
         t.task_id for t in dag.get_task("transform_player_game_logs").downstream_list
+    }
+
+    # resolve_player_ids → settle_recommendations
+    assert "settle_recommendations" in {
+        t.task_id for t in dag.get_task("resolve_player_ids").downstream_list
     }
 
 
