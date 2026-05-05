@@ -10,8 +10,23 @@ import sys
 from unittest.mock import MagicMock
 
 
+class _SmartOperatorMock:
+    """Captures task kwargs and registers the resulting mock with the active DAG."""
+
+    def __call__(self, *args, **kwargs):
+        op = MagicMock()
+        for k, v in kwargs.items():
+            setattr(op, k, v)
+        if _SmartDAGMock._current is not None:
+            _SmartDAGMock._current.tasks.append(op)
+        return op
+
+
 class _SmartDAGMock:
-    """A mock DAG factory that captures kwargs and supports context manager protocol."""
+    """A mock DAG factory that captures kwargs, supports context manager protocol,
+    and tracks tasks registered inside the ``with dag:`` block."""
+
+    _current = None  # class-level pointer to the currently active DAG
 
     def __call__(self, *args, **kwargs):
         """Create a DAG mock that stores the kwargs as attributes.
@@ -24,8 +39,18 @@ class _SmartDAGMock:
         dag_instance = MagicMock()
         for key, value in kwargs.items():
             setattr(dag_instance, key, value)
-        dag_instance.__enter__ = MagicMock(return_value=dag_instance)
-        dag_instance.__exit__ = MagicMock(return_value=False)
+        dag_instance.tasks = []
+
+        def _enter(*_):
+            _SmartDAGMock._current = dag_instance
+            return dag_instance
+
+        def _exit(*_, **__):
+            _SmartDAGMock._current = None
+            return False
+
+        dag_instance.__enter__ = MagicMock(side_effect=_enter)
+        dag_instance.__exit__ = MagicMock(side_effect=_exit)
         return dag_instance
 
 
@@ -58,6 +83,10 @@ def _stub_airflow():
     # Upgrade .DAG to _SmartDAGMock if not already set
     if not isinstance(airflow_mock.DAG, _SmartDAGMock):
         airflow_mock.DAG = _SmartDAGMock()
+
+    # Install task-registering operator/sensor stubs so tasks are tracked
+    sys.modules["airflow.operators.python"].PythonOperator = _SmartOperatorMock()
+    sys.modules["airflow.sensors.external_task"].ExternalTaskSensor = _SmartOperatorMock()
 
 
 def _stub_pendulum():
