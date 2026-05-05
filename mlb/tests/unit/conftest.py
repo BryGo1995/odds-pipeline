@@ -33,5 +33,18 @@ def _stub_pendulum():
     sys.modules.setdefault("pendulum", pendulum_stub)
 
 
+def _stub_mlflow():
+    """Stub mlflow + mlflow.sklearn so train/score modules can be imported."""
+    if "mlflow" in sys.modules:
+        return
+    mlflow_stub = MagicMock()
+    mlflow_sklearn_stub = MagicMock()
+    mlflow_tracking_stub = MagicMock()
+    sys.modules.setdefault("mlflow", mlflow_stub)
+    sys.modules.setdefault("mlflow.sklearn", mlflow_sklearn_stub)
+    sys.modules.setdefault("mlflow.tracking", mlflow_tracking_stub)
+
+
 _stub_airflow()
 _stub_pendulum()
+_stub_mlflow()
