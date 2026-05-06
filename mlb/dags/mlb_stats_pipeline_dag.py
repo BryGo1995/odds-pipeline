@@ -17,6 +17,7 @@ from mlb.plugins.transformers.teams import transform_teams
 from mlb.plugins.transformers.players import transform_players
 from mlb.plugins.transformers.player_game_logs import transform_player_game_logs
 from mlb.plugins.transformers.player_name_resolution import resolve_player_ids
+from mlb.plugins.ml.settle import settle_recommendations as _settle_recommendations
 from shared.plugins.slack_notifier import notify_failure
 
 import os
@@ -136,6 +137,14 @@ def resolve_player_ids_task(**context):
         conn.close()
 
 
+def run_settle_recommendations(**context):
+    conn = get_data_db_conn()
+    try:
+        _settle_recommendations(conn)
+    finally:
+        conn.close()
+
+
 # ---------------------------------------------------------------------------
 # DAG definition
 # ---------------------------------------------------------------------------
@@ -175,6 +184,7 @@ with DAG(
     t_xform_players = PythonOperator(task_id="transform_players",            python_callable=transform_players_task)
     t_xform_pgl     = PythonOperator(task_id="transform_player_game_logs",   python_callable=transform_player_game_logs_task)
     t_resolve       = PythonOperator(task_id="resolve_player_ids",           python_callable=resolve_player_ids_task)
+    t_settle        = PythonOperator(task_id="settle_recommendations",       python_callable=run_settle_recommendations)
 
     wait_for_odds >> [t_fetch_teams, t_fetch_players, t_fetch_pgl]
 
@@ -187,3 +197,4 @@ with DAG(
     t_xform_teams >> t_xform_players
     t_xform_players >> t_xform_pgl
     t_xform_pgl >> t_resolve
+    t_resolve >> t_settle

@@ -23,6 +23,7 @@ def test_dag_has_expected_tasks():
         "fetch_teams", "fetch_players", "fetch_batter_game_logs",
         "transform_teams", "transform_players", "transform_player_game_logs",
         "resolve_player_ids",
+        "settle_recommendations",
     }
 
 
@@ -55,6 +56,11 @@ def test_dag_task_chain():
         t.task_id for t in dag.get_task("transform_player_game_logs").downstream_list
     }
 
+    # resolve_player_ids → settle_recommendations
+    assert "settle_recommendations" in {
+        t.task_id for t in dag.get_task("resolve_player_ids").downstream_list
+    }
+
 
 def test_dag_has_slack_callback():
     from airflow.models import DagBag
@@ -68,3 +74,24 @@ def test_sensor_targets_mlb_odds_pipeline():
     dag = DagBag(dag_folder="mlb/dags/", include_examples=False).dags["mlb_stats_pipeline"]
     sensor = dag.get_task("wait_for_mlb_odds_pipeline")
     assert sensor.external_dag_id == "mlb_odds_pipeline"
+
+
+def test_pipeline_chains_settle_after_resolve():
+    import mlb.dags.mlb_stats_pipeline_dag as mod
+    task_ids = [t.task_id for t in mod.dag.tasks]
+    assert "settle_recommendations" in task_ids
+
+    settle = mod.dag.get_task("settle_recommendations")
+    upstream_ids = {t.task_id for t in settle.upstream_list}
+    assert "resolve_player_ids" in upstream_ids
+
+
+def test_run_settle_recommendations_uses_data_conn():
+    from unittest.mock import MagicMock, patch
+    from mlb.dags.mlb_stats_pipeline_dag import run_settle_recommendations
+    fake_conn = MagicMock()
+    with patch("mlb.dags.mlb_stats_pipeline_dag.get_data_db_conn", return_value=fake_conn), \
+         patch("mlb.dags.mlb_stats_pipeline_dag._settle_recommendations") as mock_settle:
+        run_settle_recommendations()
+    mock_settle.assert_called_once_with(fake_conn)
+    fake_conn.close.assert_called_once()

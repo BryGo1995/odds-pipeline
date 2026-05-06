@@ -2,11 +2,12 @@
 from unittest.mock import MagicMock, patch
 
 
-def make_context(dag_id="nba_ingest", exec_time=None):
+def make_context(dag_id="nba_ingest", exec_time=None, tags=("nba",)):
     """Build a minimal Airflow DAG-level callback context dict."""
     import pendulum
     dag = MagicMock()
     dag.dag_id = dag_id
+    dag.tags = list(tags)
     dag_run = MagicMock()
     dag_run.run_id = "scheduled__2024-01-01T20:00:00+00:00"
     return {
@@ -17,8 +18,8 @@ def make_context(dag_id="nba_ingest", exec_time=None):
     }
 
 
-def make_failure_context(**kwargs):
-    ctx = make_context(**kwargs)
+def make_failure_context(tags=("nba",), **kwargs):
+    ctx = make_context(tags=tags, **kwargs)
     ti = MagicMock()
     ti.task_id = "fetch_odds"
     ctx["task_instance"] = ti
@@ -40,6 +41,7 @@ def test_notify_failure_posts_message_with_task_and_error():
         assert "nba_ingest" in payload["text"]
         assert "fetch_odds" in payload["text"]
         assert "429" in payload["text"]
+        assert "[NBA]" in payload["text"]
 
 
 def test_notify_failure_degrades_gracefully_when_context_missing():
@@ -52,6 +54,7 @@ def test_notify_failure_degrades_gracefully_when_context_missing():
         payload = mock_post.call_args[1]["json"]
         assert "❌" in payload["text"]
         assert "unknown" in payload["text"]
+        assert "[NBA]" in payload["text"]
 
 
 def test_notify_failure_uses_mt_time():
@@ -102,6 +105,7 @@ def test_notify_score_ready_all_success():
         notify_score_ready(ctx)
         text = mock_post.call_args[1]["json"]["text"]
         assert "🏀" in text
+        assert "[NBA]" in text
         assert "✅ nba_odds_pipeline" in text
         assert "8:03am mt" in text.lower()
         assert "✅ nba_stats_pipeline" in text
@@ -222,6 +226,7 @@ def test_notify_model_ready_promotion_candidate():
         notify_model_ready(ctx)
         text = mock_post.call_args[1]["json"]["text"]
         assert "🚀 Models trained" in text
+        assert "[NBA]" in text
         assert "Points: ROC-AUC" in text
         assert "Rebounds: ROC-AUC" in text
         assert "Assists: ROC-AUC" in text
@@ -264,6 +269,7 @@ def test_notify_model_ready_no_improvement():
         notify_model_ready(ctx)
         text = mock_post.call_args[1]["json"]["text"]
         assert "🚀 Models trained" in text
+        assert "[NBA]" in text
         assert "Points: ROC-AUC" in text
         assert "Rebounds: ROC-AUC" in text
         assert "Assists: ROC-AUC" in text
@@ -311,3 +317,107 @@ def test_notify_model_ready_no_xcom():
 
         notify_model_ready(ctx)  # must not raise
         mock_post.assert_called_once()
+
+
+# --- _resolve_sport ---
+
+def test_resolve_sport_picks_first_nba_or_mlb_tag():
+    from shared.plugins.slack_notifier import _resolve_sport
+    ctx = make_context(tags=("nba", "ml"))
+    assert _resolve_sport(ctx) == "nba"
+    ctx = make_context(tags=("ml", "mlb"))
+    assert _resolve_sport(ctx) == "mlb"
+
+
+def test_resolve_sport_raises_when_no_sport_tag():
+    import pytest
+    from shared.plugins.slack_notifier import _resolve_sport
+    ctx = make_context(tags=("ml",))
+    with pytest.raises(ValueError, match="no nba/mlb tag"):
+        _resolve_sport(ctx)
+
+
+# --- MLB sport-aware behavior ---
+
+def test_notify_failure_uses_mlb_prefix():
+    from shared.plugins.slack_notifier import notify_failure
+    ctx = make_failure_context()
+    ctx["dag"].tags = ["mlb", "ml"]
+    ctx["dag"].dag_id = "mlb_odds_pipeline"
+    with patch("shared.plugins.slack_notifier._WEBHOOK_URL", "https://hooks.slack.com/test"), \
+         patch("shared.plugins.slack_notifier.requests.post") as mock_post:
+        mock_post.return_value = MagicMock(raise_for_status=MagicMock())
+        notify_failure(ctx)
+        payload = mock_post.call_args[1]["json"]
+        assert "[MLB]" in payload["text"]
+        assert "mlb_odds_pipeline" in payload["text"]
+
+
+def test_notify_score_ready_uses_mlb_pipeline_dags_and_filter():
+    import pendulum
+    from shared.plugins.slack_notifier import notify_score_ready
+
+    exec_time = pendulum.datetime(2024, 5, 4, 16, 0, tz="UTC")
+    ctx = make_context(dag_id="mlb_score_dag", exec_time=exec_time, tags=("mlb", "ml"))
+
+    fake_runs = {
+        "mlb_odds_pipeline":  MagicMock(state="success", end_date=pendulum.datetime(2024, 5, 4, 15, 3, tz="UTC")),
+        "mlb_stats_pipeline": MagicMock(state="success", end_date=pendulum.datetime(2024, 5, 4, 15, 24, tz="UTC")),
+        "mlb_feature_dag":    MagicMock(state="success", end_date=pendulum.datetime(2024, 5, 4, 15, 44, tz="UTC")),
+        "mlb_score_dag":      MagicMock(state="success", end_date=pendulum.datetime(2024, 5, 4, 16, 2, tz="UTC")),
+    }
+
+    captured_sql_args = []
+
+    class FakeCursor:
+        def __enter__(self): return self
+        def __exit__(self, *a): pass
+        def execute(self, sql, args=None):
+            captured_sql_args.append((sql, args))
+        def fetchall(self): return [("batter_hits", 4), ("batter_home_runs", 6)]
+
+    fake_conn = MagicMock()
+    fake_conn.cursor.return_value = FakeCursor()
+
+    with patch("shared.plugins.slack_notifier._WEBHOOK_URL", "https://hooks.slack.com/test"), \
+         patch("shared.plugins.slack_notifier._get_dag_run",
+               side_effect=lambda dag_id, s, e: fake_runs.get(dag_id)), \
+         patch("shared.plugins.slack_notifier.requests.post") as mock_post, \
+         patch("shared.plugins.db_client.get_data_db_conn", return_value=fake_conn):
+        mock_post.return_value = MagicMock(raise_for_status=MagicMock())
+        notify_score_ready(ctx)
+        text = mock_post.call_args[1]["json"]["text"]
+        assert "[MLB]" in text
+        assert "⚾" in text
+        assert "✅ mlb_odds_pipeline" in text
+        assert "✅ mlb_stats_pipeline" in text
+        assert "✅ mlb_feature_dag" in text
+        assert "✅ mlb_score_dag" in text
+        assert "Hits: 4" in text
+        assert "Home Runs: 6" in text
+
+    assert captured_sql_args, "expected one SQL call to recommendations table"
+    sql, args = captured_sql_args[0]
+    assert "sport = %s" in sql
+    assert args[1] == "MLB"
+
+
+def test_notify_picks_settled_uses_mlb_prefix_and_labels():
+    from datetime import date
+    from shared.plugins.slack_notifier import notify_picks_settled
+
+    game_date = date(2026, 5, 4)
+    results = [
+        {"player_name": "Aaron Judge", "prop_type": "batter_home_runs", "line": 0.5,
+         "outcome": "Over", "actual_result": True,  "actual_stat_value": 1.0, "edge": 0.18},
+        {"player_name": "Mookie Betts", "prop_type": "batter_hits",    "line": 1.5,
+         "outcome": "Over", "actual_result": False, "actual_stat_value": 1.0, "edge": 0.04},
+    ]
+    with patch("shared.plugins.slack_notifier._WEBHOOK_URL", "https://hooks.slack.com/test"), \
+         patch("shared.plugins.slack_notifier._post") as mock_post:
+        notify_picks_settled(game_date, results, sport="mlb")
+    text = mock_post.call_args.args[0]
+    assert "[MLB]" in text
+    assert "Home Runs" in text
+    assert "Hits" in text
+    assert "Aaron Judge" in text

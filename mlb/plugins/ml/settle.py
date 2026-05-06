@@ -1,16 +1,21 @@
-# nba/plugins/ml/settle.py
+# mlb/plugins/ml/settle.py
 """
-Settle daily recommendations against actual game outcomes.
+Settle daily MLB recommendations against actual game outcomes.
 
 settle_recommendations(conn) looks up each unsettled recommendation in
-player_game_logs (via player_name_mappings), records actual_result and
-actual_stat_value, and triggers a Slack recap when a game date's top-10
+mlb_player_game_logs (via mlb_player_name_mappings), records actual_result
+and actual_stat_value, and triggers a Slack recap when a game date's top-10
 are fully resolved.
+
+Doubleheader handling: stats are aggregated per (player_id, game_date) via
+SUM/GROUP BY, so a player with two same-day game logs has their stats summed
+before settlement. Single-game days collapse to a one-row sum (no behavioral
+difference vs a direct join).
 """
 import logging
 from datetime import date
 
-from nba.plugins.transformers.features import PROP_STAT_MAP
+from mlb.plugins.transformers.features import MLB_PROP_STAT_MAP
 
 try:
     from shared.plugins.slack_notifier import notify_picks_settled
@@ -19,7 +24,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-_STAT_COLS = list(PROP_STAT_MAP.values())  # ['pts', 'reb', 'ast', 'fg3m', 'fg3a']
+_STAT_COLS = list(MLB_PROP_STAT_MAP.values())  # ['hits', 'total_bases', 'home_runs']
 
 
 def settle_recommendations(conn) -> None:
@@ -30,39 +35,42 @@ def settle_recommendations(conn) -> None:
     newly_settled_dates = set()
 
     with conn.cursor() as cur:
-        # Fetch all unsettled recs that have a matching game log entry
         cur.execute(
             """
+            WITH agg AS (
+                SELECT player_id, game_date,
+                       SUM(hits)        AS hits,
+                       SUM(total_bases) AS total_bases,
+                       SUM(home_runs)   AS home_runs
+                FROM mlb_player_game_logs
+                GROUP BY player_id, game_date
+            )
             SELECT
                 r.id,
                 r.player_name,
                 r.prop_type,
                 r.line,
                 r.game_date,
-                pgl.pts,
-                pgl.reb,
-                pgl.ast,
-                pgl.fg3m,
-                pgl.fg3a
+                agg.hits,
+                agg.total_bases,
+                agg.home_runs
             FROM recommendations r
-            JOIN player_name_mappings m ON m.odds_api_name = r.player_name
-            JOIN player_game_logs pgl
-                ON pgl.player_id = m.nba_player_id
-               AND pgl.game_date = r.game_date
+            JOIN mlb_player_name_mappings m ON m.odds_api_name = r.player_name
+            JOIN agg                          ON agg.player_id = m.mlb_player_id
+                                             AND agg.game_date = r.game_date
             WHERE r.settled_at IS NULL
               AND r.game_date < CURRENT_DATE
-              AND r.sport = 'NBA'
+              AND r.sport = 'MLB'
             """
         )
         resolvable = cur.fetchall()
 
-        # Fetch stale recs (>7 days old) that never resolved — mark unresolvable
         cur.execute(
             """
             SELECT id FROM recommendations
             WHERE settled_at IS NULL
               AND game_date < CURRENT_DATE - INTERVAL '7 days'
-              AND sport = 'NBA'
+              AND sport = 'MLB'
             """
         )
         stale_ids = [row[0] for row in cur.fetchall()]
@@ -76,12 +84,12 @@ def settle_recommendations(conn) -> None:
 
 
 def _settle_resolvable(conn, rows, newly_settled_dates: set) -> None:
-    # rows: id, player_name, prop_type, line, game_date, pts, reb, ast, fg3m, fg3a
-    stats_offset = 5  # first stat column index in the row tuple
+    # rows: id, player_name, prop_type, line, game_date, hits, total_bases, home_runs
+    stats_offset = 5
 
     for row in rows:
         rec_id, player_name, prop_type, line, game_date = row[:5]
-        stat_col = PROP_STAT_MAP.get(prop_type)
+        stat_col = MLB_PROP_STAT_MAP.get(prop_type)
         if not stat_col:
             log.warning("Unknown prop_type '%s' for rec id=%d — skipping", prop_type, rec_id)
             continue
@@ -130,7 +138,7 @@ def _notify_completed_dates(conn, newly_settled_dates: set) -> None:
             FROM recommendations
             WHERE game_date = ANY(%s)
               AND rank <= 10
-              AND sport = 'NBA'
+              AND sport = 'MLB'
             GROUP BY game_date
             HAVING COUNT(*) FILTER (WHERE settled_at IS NULL) = 0
             """,
@@ -149,7 +157,7 @@ def _send_recap(conn, game_date: date) -> None:
             SELECT player_name, prop_type, line, outcome, actual_result,
                    actual_stat_value, edge
             FROM recommendations
-            WHERE game_date = %s AND rank <= 10 AND sport = 'NBA'
+            WHERE game_date = %s AND rank <= 10 AND sport = 'MLB'
             ORDER BY rank
             """,
             (game_date,),
@@ -169,4 +177,4 @@ def _send_recap(conn, game_date: date) -> None:
         for r in rows
     ]
     if notify_picks_settled is not None:
-        notify_picks_settled(game_date, results, sport="nba")
+        notify_picks_settled(game_date, results, sport="mlb")
