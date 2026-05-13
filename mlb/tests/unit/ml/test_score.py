@@ -66,7 +66,7 @@ def test_score_writes_recommendations_with_sport_mlb():
         assert call.args[1][-1] == "MLB"  # sport is the last bound parameter
 
 
-def test_score_partial_models_split_top10_evenly():
+def test_score_skips_prop_types_whose_model_fails_to_load():
     from mlb.plugins.ml.score import score
     df = _make_today_df()
 
@@ -88,10 +88,24 @@ def test_score_partial_models_split_top10_evenly():
         score(fake_conn, "2026-05-04")
 
     insert_calls = [c for c in fake_cur.execute.call_args_list if "INSERT INTO recommendations" in c.args[0]]
-    # Only batter_hits succeeded (batter_total_bases raised), so all top-N are batter_hits
+    # Only batter_hits succeeded (batter_total_bases raised), so all picks are
+    # batter_hits — with only one surviving prop type there is no split to perform.
     top_prop_types = [c.args[1][1] for c in insert_calls]
     assert all(pt == "batter_hits" for pt in top_prop_types)
     assert "batter_total_bases" not in top_prop_types
+
+
+def test_allocate_slots_distributes_remainder_to_top_edges():
+    """Direct test of _allocate_slots since steady-state MLB has only 2
+    markets and never exercises the remainder branch."""
+    from mlb.plugins.ml.score import _allocate_slots
+    # 10 slots across 3 prop types: base=3, remainder=1 → top edge gets 4
+    top_edges = {"a": 0.10, "b": 0.05, "c": 0.02}
+    allocation = _allocate_slots(["a", "b", "c"], top_edges, total=10)
+    assert sum(allocation.values()) == 10
+    assert allocation["a"] == 4  # top edge gets the remainder
+    assert allocation["b"] == 3
+    assert allocation["c"] == 3
 
 
 def test_score_zero_models_raises():

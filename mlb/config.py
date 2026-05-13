@@ -12,7 +12,7 @@ MARKETS = [
     "totals",
 ]
 
-# Batter player-prop markets — MVP targets these three.
+# Batter player-prop markets — MVP targets these two.
 # Post-MVP: batter_rbis, batter_runs_scored, batter_stolen_bases,
 #           batter_hits_runs_rbis; plus pitcher props.
 PLAYER_PROP_MARKETS = [

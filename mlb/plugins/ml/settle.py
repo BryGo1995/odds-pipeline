@@ -24,7 +24,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-_STAT_COLS = list(MLB_PROP_STAT_MAP.values())  # ['hits', 'total_bases', 'home_runs']
+_STAT_COLS = list(MLB_PROP_STAT_MAP.values())  # ['hits', 'total_bases']
 
 
 def settle_recommendations(conn) -> None:
