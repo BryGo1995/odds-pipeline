@@ -9,7 +9,7 @@ import pytest
 
 def _make_today_df():
     rows = []
-    for prop_type in ("batter_hits", "batter_total_bases", "batter_home_runs"):
+    for prop_type in ("batter_hits", "batter_total_bases"):
         for i in range(8):
             rows.append({
                 "player_id":         1000 + i,
@@ -88,11 +88,10 @@ def test_score_partial_models_split_top10_evenly():
         score(fake_conn, "2026-05-04")
 
     insert_calls = [c for c in fake_cur.execute.call_args_list if "INSERT INTO recommendations" in c.args[0]]
-    # First 10 ranks are evenly split — only 2 active prop types, so 5/5
-    top10_prop_types = [c.args[1][1] for c in insert_calls[:10]]
-    assert top10_prop_types.count("batter_hits") == 5
-    assert top10_prop_types.count("batter_home_runs") == 5
-    assert "batter_total_bases" not in top10_prop_types
+    # Only batter_hits succeeded (batter_total_bases raised), so all top-N are batter_hits
+    top_prop_types = [c.args[1][1] for c in insert_calls]
+    assert all(pt == "batter_hits" for pt in top_prop_types)
+    assert "batter_total_bases" not in top_prop_types
 
 
 def test_score_zero_models_raises():

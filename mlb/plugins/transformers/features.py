@@ -19,7 +19,6 @@ from shared.plugins.odds_math import american_odds_to_implied_prob
 MLB_PROP_STAT_MAP = {
     "batter_hits":        "hits",
     "batter_total_bases": "total_bases",
-    "batter_home_runs":   "home_runs",
 }
 
 _PROP_TYPES = list(MLB_PROP_STAT_MAP.keys())

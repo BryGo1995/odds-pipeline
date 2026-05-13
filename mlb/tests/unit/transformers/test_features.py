@@ -38,12 +38,11 @@ def _make_multi_query_conn(query_results):
 
 # --- helpers --------------------------------------------------------------
 
-def test_mlb_prop_stat_map_covers_three_batter_props():
+def test_mlb_prop_stat_map_covers_two_batter_props():
     from mlb.plugins.transformers.features import MLB_PROP_STAT_MAP
     assert MLB_PROP_STAT_MAP == {
         "batter_hits": "hits",
         "batter_total_bases": "total_bases",
-        "batter_home_runs": "home_runs",
     }
 
 
@@ -145,7 +144,7 @@ def test_build_features_query_filters_by_baseball_mlb_sport():
     assert "mlb_player_id" in sql_text
 
 
-def test_build_features_full_row_with_three_prop_types():
+def test_build_features_full_row_with_two_prop_types():
     """One Over row per (player, prop_type, bookmaker) with rolling stats and
     rest_days merged in. Verifies actual_result is computed against the line."""
     from mlb.plugins.transformers.features import build_features
@@ -161,9 +160,6 @@ def test_build_features_full_row_with_three_prop_types():
          3, 4, 0),
         (660271, "Mike Trout", datetime.date(2026, 4, 30), "batter_total_bases", "fanduel",
          2.5, +120, 0.0, "LAA @ SEA", "LAA", "SEA",
-         3, 4, 0),
-        (660271, "Mike Trout", datetime.date(2026, 4, 30), "batter_home_runs", "fanduel",
-         0.5, +250, 0.0, "LAA @ SEA", "LAA", "SEA",
          3, 4, 0),
     ]
     rolling_rows = [
@@ -185,19 +181,16 @@ def test_build_features_full_row_with_three_prop_types():
     ])
     df = build_features(mock_conn, "2026-04-30")
 
-    assert len(df) == 3
-    assert set(df["prop_type"]) == {"batter_hits", "batter_total_bases", "batter_home_runs"}
+    assert len(df) == 2
+    assert set(df["prop_type"]) == {"batter_hits", "batter_total_bases"}
 
-    # actual_result: hits=3 vs line 1.5 → 1; total_bases=4 vs 2.5 → 1; home_runs=0 vs 0.5 → 0
+    # actual_result: hits=3 vs line 1.5 -> 1; total_bases=4 vs 2.5 -> 1
     hits_row = df[df["prop_type"] == "batter_hits"].iloc[0]
     tb_row   = df[df["prop_type"] == "batter_total_bases"].iloc[0]
-    hr_row   = df[df["prop_type"] == "batter_home_runs"].iloc[0]
     assert hits_row["actual_result"] == 1
     assert tb_row["actual_result"] == 1
-    assert hr_row["actual_result"] == 0
     assert hits_row["actual_stat_value"] == 3
     assert tb_row["actual_stat_value"] == 4
-    assert hr_row["actual_stat_value"] == 0
 
     # is_home: LAA player, matchup "LAA @ SEA" → away (home_abbr=SEA != team=LAA)
     assert hits_row["is_home"] is False or hits_row["is_home"] == False  # noqa: E712

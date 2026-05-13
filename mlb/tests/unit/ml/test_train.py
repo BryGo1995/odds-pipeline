@@ -9,11 +9,11 @@ import pytest
 
 
 def _make_labeled_df(n_per_prop: int = 30) -> pd.DataFrame:
-    """Build a synthetic labeled feature df covering all 3 MLB prop types."""
+    """Build a synthetic labeled feature df covering all MLB prop types."""
     rng = np.random.default_rng(seed=42)
     rows = []
     base_date = pd.Timestamp("2025-08-01")
-    for prop_type in ("batter_hits", "batter_total_bases", "batter_home_runs"):
+    for prop_type in ("batter_hits", "batter_total_bases"):
         for i in range(n_per_prop):
             rows.append({
                 "player_id":         1000 + i,
@@ -58,17 +58,6 @@ def test_train_model_per_prop_below_min_rows_raises():
     with patch("mlb.plugins.ml.train.load_training_data", return_value=_make_labeled_df(n_per_prop=10)):
         with pytest.raises(ValueError, match="Insufficient training data"):
             train_model(prop_type="batter_hits")
-
-
-def test_train_model_home_runs_min_rows_threshold_is_100():
-    """batter_home_runs needs 100 rows (sparser positive class)."""
-    from mlb.plugins.ml.train import train_model
-    # 60 rows for HR — should fail (>50 but <100)
-    df = _make_labeled_df(n_per_prop=60)
-    df = df[df["prop_type"] == "batter_home_runs"].reset_index(drop=True)
-    with patch("mlb.plugins.ml.train.load_training_data", return_value=df):
-        with pytest.raises(ValueError, match="Insufficient training data"):
-            train_model(prop_type="batter_home_runs")
 
 
 def test_train_model_registers_with_mlb_prefix():
@@ -119,14 +108,14 @@ def test_train_all_models_skips_under_min_rows(caplog):
     assert "Skipping" in caplog.text
 
 
-def test_train_all_models_iterates_three_mlb_prop_types():
+def test_train_all_models_iterates_two_mlb_prop_types():
     from mlb.plugins.ml.train import train_all_models, MODEL_NAME
     from mlb.plugins.transformers.features import MLB_PROP_STAT_MAP
     assert MODEL_NAME == "mlb_prop_model"
-    assert set(MLB_PROP_STAT_MAP.keys()) == {"batter_hits", "batter_total_bases", "batter_home_runs"}
+    assert set(MLB_PROP_STAT_MAP.keys()) == {"batter_hits", "batter_total_bases"}
 
     called_with = []
     with patch("mlb.plugins.ml.train.train_model", side_effect=lambda features_dir, prop_type: called_with.append(prop_type) or f"run-{prop_type}"):
         results = train_all_models()
-    assert set(called_with) == {"batter_hits", "batter_total_bases", "batter_home_runs"}
+    assert set(called_with) == {"batter_hits", "batter_total_bases"}
     assert set(results.keys()) == set(called_with)
