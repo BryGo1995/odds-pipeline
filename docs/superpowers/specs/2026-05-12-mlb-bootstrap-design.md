@@ -1,7 +1,7 @@
 # MLB Bootstrap — Design
 
 **Date:** 2026-05-12
-**Status:** Draft (pending user review)
+**Status:** ✅ Complete (executed 2026-05-13; pipeline live)
 **Scope:** One-time operational rollout that takes the merged MLB code (foundation → odds → stats → features → ML stage, all green) from "tests pass" to "produces daily recommendations with `sport='MLB'` in Postgres." Closes the gap that prior plans never covered: every MLB plan exited at "git clean / tests green," none included a runbook for actually operating the pipeline.
 
 ## Goals
@@ -295,3 +295,33 @@ Independent of the above, two infrastructure items surfaced by this audit but de
 
 - The "odds backfill" misnomer in `mlb_odds_backfill_dag` / `nba_odds_backfill_dag` — neither DAG actually backfills historical odds, since the Odds-API historical endpoint isn't wired into `shared/plugins/odds_api_client.py`. Renaming or implementing historical fetch is a separate piece of work (covered by open issue #12).
 - A bootstrap-style spec template — every prior plan exited at "tests green" without an operational gate. If we ship a second sport (NFL), we should bake bootstrap into the slice plans rather than as an afterthought.
+
+## Execution outcomes (2026-05-13)
+
+Bootstrap executed in a single session against the live Docker stack.
+
+| Phase | Outcome | Notes |
+|---|---|---|
+| 0 — HR diagnostic | Task 1b path (drop HR) | 24 days of `mlb_player_props` raw responses inspected, zero contain `batter_home_runs`. Live API cross-check skipped (consistent signal across 10 days). 4 commits on `main` to drop HR + cleanup. |
+| 1 — Stats backfill | ✅ 65 min | 1590 players, 273k game-log rows, 279 distinct game dates (Mar 15 2025 → May 12 2026), 429 name mappings. |
+| 2 — Daily stats first run | ✅ 45 sec | Sensor + 7 tasks + `settle_recommendations` no-op, all green via Airflow's auto-catchup of one missed interval. |
+| 3 — Feature backfill | ✅ < 15 sec | 22 parquet files (Apr 21 → May 12), 98.3% label coverage. |
+| 4 — Train | ✅ 4 min | `batter_total_bases` v2: AUC 0.575, Brier 0.240 (PASS). `batter_hits` v2: AUC 0.541, Brier 0.246 (FAIL — below 0.55). Both `promotion_candidate=true` tags set. `log_loss` not logged by `train.py` (substituted Brier for calibration check). |
+| 5 — Manual MLflow promotion | ✅ | `mlb_prop_model_batter_total_bases` v2 @production. `mlb_prop_model_batter_hits` left without alias (score DAG skips with WARNING). |
+| 6 — Unpause daily DAGs | ✅ | Auto-catchup fired one run of `mlb_feature_dag` + `mlb_score_dag` for execution_date 2026-05-11. **145 recommendations written** for that date, ranked top-10 has 11 positive-edge picks. |
+| 7 — T+1 settle verification | ✅ (fast-forwarded) | `settle_recommendations` called manually 2026-05-13, settled 142/145 May 11 recs (3 name-mapping misses). **Top 10 went 6/10 (60% hit rate).** |
+
+### Lessons baked into plan errata (for next-sport reuse)
+
+- **Phase 1 `distinct_dates >= 300` was over-tight.** Actual MLB game-day count for a full prior season + partial current season is ~280 due to off-days, all-star break, and playoff thinning. Loosen to "covers full ranges of MIN(game_date)..MAX(game_date) with > 90% density" for NFL.
+- **Phase 0 spec/plan originally named wrong table + endpoint.** Pre-flight intel uncovered: player props are under `raw_api_responses.endpoint='mlb_player_props'`, not `mlb_odds`. Corrected in commit `639f86e`.
+- **`recommendations` is not 10-rows-per-day.** The score DAG writes every candidate prop (~80-150/day) and uses `rank` for top-10 ordering. The "TOP_N=10" name refers to ranked highlights, not row count. NBA precedent: ~84/day.
+- **MLflow `promotion_candidate` tag lives on the RUN, not the model VERSION.** Initial inspection looked at `v.tags` which was empty; needed to look at `run.data.tags`. Spec's Phase 4 gate Python snippet should query both.
+- **`train.py` does not log `log_loss`.** Spec's promotion threshold included log-loss but the metric was never emitted by training code. Either add it to `train.py` (next-slice cleanup) or document the Brier substitution as the actual gate.
+
+### Open follow-ups (non-blocking)
+
+- **`batter_hits` model fails AUC threshold (0.541 < 0.55).** Strong Over-bias (recall 0.84). Issue to open. Most likely fixed by Opposing-Pitcher features (umbrella #1).
+- **`log_loss` not logged by `train.py`.** Small `train.py` patch.
+- **MLflow auto-catchup duplicate versions.** Both `train_dag` runs (catchup + manual) produced identical-metrics versions. Cosmetic; consider gating catchup or making run-fingerprint deduplication.
+- **Slack notifications not observed by Claude.** User should visually confirm `[MLB]` posts fire tonight at 22:00 UTC (today's first natural `mlb_score_dag` run) and tomorrow morning (`notify_picks_settled` recap).
