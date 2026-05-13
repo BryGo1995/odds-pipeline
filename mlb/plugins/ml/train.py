@@ -2,10 +2,9 @@
 """
 XGBoost training module for MLB batter-prop ML model.
 
-Mirrors nba/plugins/ml/train.py with three substitutions:
+Mirrors nba/plugins/ml/train.py with two substitutions:
 - MLB_PROP_STAT_MAP from mlb.plugins.transformers.features
 - MODEL_NAME = "mlb_prop_model"
-- batter_home_runs has min_rows=100 (sparser positive class)
 
 train_model() reads all labeled Parquet files via DuckDB, trains a calibrated
 XGBoost classifier, logs metrics to MLflow, and tags the run as
@@ -45,11 +44,10 @@ VALIDATION_DAYS = 2
 FEATURES_DIR = os.environ.get("FEATURES_DIR", "/data/features")
 MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI", "http://mlflow:5000")
 
-# Min-rows threshold per prop type. Defaults to 50; HR is sparser (100).
+# Min-rows threshold per prop type. Defaults to 50.
 _MIN_ROWS = {
     "batter_hits":        50,
     "batter_total_bases": 50,
-    "batter_home_runs":  100,
 }
 
 
