@@ -54,16 +54,24 @@ The runbook is a sequence of phases, each with an explicit **verification gate**
 
 ### Phase 0: Pre-bootstrap diagnostic — `batter_home_runs` market
 
-**Action:** SQL-inspect the most recent `raw_responses` row for `endpoint='mlb_odds'`. Parse the JSON and check whether any bookmaker returned a `batter_home_runs` market for any event.
+**Action:** SQL-inspect the most recent `raw_api_responses` row for `endpoint='mlb_player_props'` (the player-props endpoint is separate from the game-level `mlb_odds` endpoint). Parse the JSON and check whether any bookmaker returned a `batter_home_runs` market for any event.
 
 ```sql
-SELECT response_json -> 0 -> 'bookmakers'
-FROM raw_responses
-WHERE endpoint = 'mlb_odds'
-ORDER BY fetched_at DESC LIMIT 1;
+WITH latest AS (
+  SELECT response FROM raw_api_responses
+  WHERE endpoint = 'mlb_player_props' AND status = 'success'
+  ORDER BY fetched_at DESC LIMIT 1
+)
+SELECT DISTINCT
+  jsonb_array_elements(jsonb_array_elements(jsonb_array_elements(response)->'bookmakers')->'markets')->>'key'
+  AS market_key
+FROM latest
+ORDER BY market_key;
 ```
 
 (Or fetch a single MLB event's odds endpoint live with the `batter_home_runs` market explicitly requested and inspect the raw return.)
+
+**Pre-flight intel (2026-05-13):** the diagnostic above was run during spec/plan authoring. Across 24 daily `mlb_player_props` responses (Apr 21 → May 12), zero contain `batter_home_runs`. The distinct market-key walk returns only `batter_hits` and `batter_total_bases`. This strongly indicates the API-availability path; Phase 0 in the plan retains the diagnostic as a re-verification step in case API behavior changes between authoring and execution.
 
 **Decision rule:**
 - If `batter_home_runs` market is present in the API response: this is a transform bug in `shared/plugins/transformers/player_props.py`. Fix it inline (likely a market-name filter that's too narrow), add a regression test, ship the fix to `main`, and **all 3 markets stay in scope**.
