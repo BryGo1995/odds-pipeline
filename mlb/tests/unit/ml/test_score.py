@@ -120,13 +120,18 @@ def test_score_zero_models_raises():
             score(fake_conn, "2026-05-04")
 
 
-def test_score_empty_features_raises():
+def test_score_empty_features_returns_without_writing():
+    """On no-games days the feature parquet is absent, so load_todays_features
+    returns an empty frame. score() should log and return without raising or
+    touching the DB — mirrors mlb_feature_dag's success-on-empty behavior."""
     from mlb.plugins.ml.score import score
     fake_conn = MagicMock()
 
     with patch("mlb.plugins.ml.score.load_todays_features", return_value=pd.DataFrame()):
-        with pytest.raises(ValueError, match="No feature file found"):
-            score(fake_conn, "2026-05-04")
+        result = score(fake_conn, "2026-05-04")
+
+    assert result is None
+    fake_conn.cursor.assert_not_called()
 
 
 def test_score_records_model_version_from_alias():

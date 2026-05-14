@@ -237,3 +237,18 @@ def test_score_ranks_within_allocation_by_edge():
     rows_by_rank = {c.args[1][8]: c.args[1] for c in insert_calls}  # rank -> row
     assert rows_by_rank[1][0] == "P5"  # player_name at index 0
     assert rows_by_rank[5][0] == "P1"
+
+
+def test_score_empty_features_returns_without_writing():
+    """On no-games days the feature parquet is absent, so load_todays_features
+    returns an empty frame. score() should log and return without raising or
+    touching the DB — mirrors nba_feature_dag's success-on-empty behavior
+    (issue #14)."""
+    from nba.plugins.ml.score import score
+    mock_conn, _ = _setup_mock_conn()
+
+    with patch("nba.plugins.ml.score.load_todays_features", return_value=pd.DataFrame()):
+        result = score(mock_conn, "2026-04-16")
+
+    assert result is None
+    mock_conn.cursor.assert_not_called()
