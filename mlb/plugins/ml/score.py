@@ -68,7 +68,8 @@ def score(conn, game_date: str, features_dir: str = FEATURES_DIR) -> None:
 
     df = load_todays_features(game_date, features_dir)
     if df.empty:
-        raise ValueError(f"No feature file found for {game_date} in {features_dir}")
+        log.warning("No features for %s — skipping scoring (likely a no-games day)", game_date)
+        return
 
     scored_subsets = []
     active_prop_types = []
