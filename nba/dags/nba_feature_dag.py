@@ -7,6 +7,7 @@ from airflow.operators.python import PythonOperator
 from airflow.sensors.external_task import ExternalTaskSensor
 
 from shared.plugins.db_client import get_data_db_conn
+from shared.plugins.slate import slate_date
 from shared.plugins.slack_notifier import notify_failure
 from nba.plugins.transformers.features import build_features
 
@@ -15,7 +16,7 @@ FEATURES_DIR = os.environ.get("FEATURES_DIR", "/data/features")
 
 def run_build_features(**context):
     import logging
-    game_date = context["ds"]  # YYYY-MM-DD
+    game_date = slate_date(context)
     conn = get_data_db_conn()
     try:
         df = build_features(conn, game_date)
@@ -39,7 +40,7 @@ with DAG(
     dag_id="nba_feature_dag",
     default_args=default_args,
     description="Build player prop features from Postgres and write to Parquet",
-    schedule_interval="40 15 * * *",  # 8:40am MT — 20 min after nba_stats_pipeline
+    schedule_interval="40 15 * * *",  # 3:40pm MT — 20 min after nba_stats_pipeline
     start_date=pendulum.datetime(2024, 1, 1, tz="America/Denver"),
     catchup=False,
     tags=["nba", "ml"],

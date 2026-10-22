@@ -6,12 +6,13 @@ from airflow.operators.python import PythonOperator
 from airflow.sensors.external_task import ExternalTaskSensor
 
 from shared.plugins.db_client import get_data_db_conn
+from shared.plugins.slate import slate_date
 from shared.plugins.slack_notifier import notify_failure, notify_score_ready
 from nba.plugins.ml.score import score
 
 
 def run_score(**context):
-    game_date = context["ds"]
+    game_date = slate_date(context)
     conn = get_data_db_conn()
     try:
         score(conn, game_date)
@@ -29,7 +30,7 @@ with DAG(
     dag_id="nba_score_dag",
     default_args=default_args,
     description="Score today's player props and write ranked recommendations to Postgres",
-    schedule_interval="0 16 * * *",  # 9:00am MT — after nba_feature_dag at 8:40am
+    schedule_interval="0 16 * * *",  # 4:00pm MT — after nba_feature_dag at 3:40pm, before evening tip-offs
     start_date=pendulum.datetime(2024, 1, 1, tz="America/Denver"),
     catchup=False,
     tags=["nba", "ml"],

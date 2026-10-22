@@ -5,6 +5,8 @@ import os
 import pendulum
 import requests
 
+from shared.plugins.slate import slate_date
+
 logger = logging.getLogger(__name__)
 
 _WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL")
@@ -87,8 +89,8 @@ def notify_score_ready(context):
     pipeline_dags = _DAILY_PIPELINE_DAGS_BY_SPORT[sport]
 
     execution_date = context["execution_date"]
-    mt_exec = pendulum.instance(execution_date).in_timezone("America/Denver")
-    date_str = mt_exec.strftime("%a %b %-d")
+    game_date = slate_date(context)
+    date_str = pendulum.parse(game_date).strftime("%a %b %-d")
 
     day_start = pendulum.instance(execution_date).start_of("day")
     day_end = day_start.add(days=1)
@@ -121,7 +123,7 @@ def notify_score_ready(context):
                     WHERE game_date = %s AND rank <= 10 AND sport = %s
                     GROUP BY prop_type ORDER BY prop_type
                     """,
-                    (execution_date.strftime("%Y-%m-%d"), sport_filter),
+                    (game_date, sport_filter),
                 )
                 prop_counts = cur.fetchall()
         finally:

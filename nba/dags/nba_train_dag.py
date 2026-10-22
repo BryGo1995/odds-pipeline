@@ -23,7 +23,7 @@ with DAG(
     dag_id="nba_train_dag",
     default_args=default_args,
     description="Train XGBoost player prop model and log to MLflow registry",
-    schedule_interval="0 10 * * 1",  # Every Monday 10:00 UTC (3:00am MT)
+    schedule_interval="0 10 * * 1",  # Every Monday 10:00am MT (cron runs in start_date tz)
     start_date=pendulum.datetime(2024, 1, 1, tz="America/Denver"),
     catchup=False,
     tags=["nba", "ml"],
