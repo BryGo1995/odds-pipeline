@@ -66,3 +66,61 @@ def test_build_features_returns_empty_when_no_props():
     ])
     result = build_features(mock_conn, "2026-03-26")
     assert result.empty
+
+
+def _labelable_df():
+    import datetime
+    return pd.DataFrame({
+        "player_id":   [1, 1, 2],
+        "game_date":   [datetime.date(2026, 10, 21)] * 3,
+        "prop_type":   ["player_points", "player_rebounds", "player_points"],
+        "line":        [24.5, 8.5, 10.5],
+    })
+
+
+def test_attach_labels_sets_result_from_game_log():
+    import datetime
+    from nba.plugins.transformers.features import attach_labels
+    # stat columns are queried in sorted order: ast, fg3a, fg3m, pts, reb
+    mock_conn, _ = _make_mock_conn(
+        [(1, datetime.date(2026, 10, 21), 3, 5, 2, 27, 6)],
+        ["player_id", "game_date", "ast", "fg3a", "fg3m", "pts", "reb"],
+    )
+    result = attach_labels(mock_conn, _labelable_df())
+    assert result["actual_stat_value"].tolist()[:2] == [27, 6]
+    assert result["actual_result"].tolist()[:2] == [1, 0]  # 27 > 24.5, 6 < 8.5
+    assert result[["actual_stat_value", "actual_result"]].iloc[2].isna().all()  # no game log
+
+
+def test_attach_labels_null_when_game_not_played():
+    from nba.plugins.transformers.features import attach_labels
+    mock_conn, _ = _make_mock_conn([], ["player_id", "game_date", "ast", "fg3a", "fg3m", "pts", "reb"])
+    result = attach_labels(mock_conn, _labelable_df())
+    assert result["actual_result"].isna().all()
+
+
+def test_label_feature_files_relabels_only_past_unlabeled_files(tmp_path):
+    import datetime
+    from nba.plugins.transformers.features import label_feature_files
+
+    unlabeled = _labelable_df().assign(actual_stat_value=None, actual_result=None)
+    for d in ["2026-10-10", "2026-10-21", "2026-10-22"]:
+        unlabeled.assign(game_date=datetime.date.fromisoformat(d)).to_parquet(
+            tmp_path / f"props_features_{d}.parquet", index=False
+        )
+
+    mock_conn, _ = _make_mock_conn(
+        [(1, datetime.date(2026, 10, 21), 3, 5, 2, 27, 6)],
+        ["player_id", "game_date", "ast", "fg3a", "fg3m", "pts", "reb"],
+    )
+    rewritten = label_feature_files(mock_conn, str(tmp_path), before_date="2026-10-22")
+
+    # 10-10 is outside the 7-day lookback; 10-22 is today's (pre-game) slate
+    assert rewritten == 1
+    labeled = pd.read_parquet(tmp_path / "props_features_2026-10-21.parquet")
+    assert labeled["actual_result"].tolist()[:2] == [1, 0]
+    assert pd.read_parquet(tmp_path / "props_features_2026-10-22.parquet")["actual_result"].isna().all()
+    assert pd.read_parquet(tmp_path / "props_features_2026-10-10.parquet")["actual_result"].isna().all()
+
+    # Second pass: nothing changed, nothing rewritten
+    assert label_feature_files(mock_conn, str(tmp_path), before_date="2026-10-22") == 0

@@ -9,7 +9,7 @@ from airflow.sensors.external_task import ExternalTaskSensor
 from shared.plugins.db_client import get_data_db_conn
 from shared.plugins.slate import slate_date
 from shared.plugins.slack_notifier import notify_failure
-from nba.plugins.transformers.features import build_features
+from nba.plugins.transformers.features import build_features, label_feature_files
 
 FEATURES_DIR = os.environ.get("FEATURES_DIR", "/data/features")
 
@@ -26,6 +26,16 @@ def run_build_features(**context):
         output_path = f"{FEATURES_DIR}/props_features_{game_date}.parquet"
         df.to_parquet(output_path, index=False)
         logging.getLogger(__name__).info("Wrote %d rows to %s", len(df), output_path)
+    finally:
+        conn.close()
+
+
+def run_label_features(**context):
+    import logging
+    conn = get_data_db_conn()
+    try:
+        rewritten = label_feature_files(conn, FEATURES_DIR, before_date=slate_date(context))
+        logging.getLogger(__name__).info("Re-labeled %d feature file(s)", rewritten)
     finally:
         conn.close()
 
@@ -61,4 +71,10 @@ with DAG(
         python_callable=run_build_features,
     )
 
-    wait_for_stats >> t_build_features
+    # Labels for past slates become available once nba_stats_pipeline loads their game logs
+    t_label_features = PythonOperator(
+        task_id="label_features",
+        python_callable=run_label_features,
+    )
+
+    wait_for_stats >> [t_build_features, t_label_features]
