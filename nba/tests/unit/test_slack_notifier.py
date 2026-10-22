@@ -10,11 +10,14 @@ def make_context(dag_id="nba_ingest", exec_time=None, tags=("nba",)):
     dag.tags = list(tags)
     dag_run = MagicMock()
     dag_run.run_id = "scheduled__2024-01-01T20:00:00+00:00"
+    # 2024-01-02 03:02 UTC = 2024-01-01 20:02 MST
+    execution_date = exec_time or pendulum.datetime(2024, 1, 2, 3, 2, tz="UTC")
     return {
         "dag": dag,
         "dag_run": dag_run,
-        # 2024-01-02 03:02 UTC = 2024-01-01 20:02 MST
-        "execution_date": exec_time or pendulum.datetime(2024, 1, 2, 3, 2, tz="UTC"),
+        "execution_date": execution_date,
+        # Daily schedule: the run fires one interval after its logical date
+        "data_interval_end": execution_date.add(days=1),
     }
 
 
@@ -400,6 +403,9 @@ def test_notify_score_ready_uses_mlb_pipeline_dags_and_filter():
     sql, args = captured_sql_args[0]
     assert "sport = %s" in sql
     assert args[1] == "MLB"
+    # Recs are looked up by slate date (data_interval_end in ET), not the logical date
+    assert args[0] == "2024-05-05"
+    assert "Sun May 5" in text
 
 
 def test_notify_picks_settled_uses_mlb_prefix_and_labels():

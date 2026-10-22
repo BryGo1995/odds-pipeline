@@ -74,3 +74,13 @@ def test_sensor_targets_nba_odds_pipeline():
     dag = DagBag(dag_folder="nba/dags/", include_examples=False).dags["nba_stats_pipeline"]
     sensor = dag.get_task("wait_for_nba_odds_pipeline")
     assert sensor.external_dag_id == "nba_odds_pipeline"
+
+
+def test_current_season_rolls_over_in_october():
+    from datetime import date
+    from nba.dags.nba_stats_pipeline_dag import _get_current_season
+    assert _get_current_season(date(2026, 10, 1)) == "2026-27"
+    assert _get_current_season(date(2026, 10, 21)) == "2026-27"
+    assert _get_current_season(date(2026, 9, 30)) == "2025-26"
+    assert _get_current_season(date(2027, 6, 15)) == "2026-27"
+    assert _get_current_season(date(2099, 12, 31)) == "2099-00"

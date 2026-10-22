@@ -26,11 +26,11 @@ nba_api ────► nba_stats_pipeline ──► teams / players / game_logs
 nba_train_dag (weekly) ────────────► MLflow model registry
 ```
 
-- **nba_odds_pipeline**: Fetches events, odds, scores, and player props from the Odds-API; transforms into structured tables in a single daily run (8am MT)
-- **nba_stats_pipeline**: Fetches and transforms NBA player/team stats from nba_api; waits for `nba_odds_pipeline` to complete before running (8:20am MT)
-- **nba_feature_dag**: Builds player prop features from Postgres and writes daily Parquet files; waits for `nba_stats_pipeline` (8:40am MT)
-- **nba_score_dag**: Loads the production XGBoost model from MLflow and scores today's props; writes ranked recommendations to Postgres (9am MT)
-- **nba_train_dag**: Trains the XGBoost model weekly on historical features/labels and promotes the best model in MLflow (Mondays 3am MT)
+- **nba_odds_pipeline**: Fetches events, odds, scores, and player props from the Odds-API; transforms into structured tables in a single daily run (3pm MT)
+- **nba_stats_pipeline**: Fetches and transforms NBA player/team stats from nba_api; waits for `nba_odds_pipeline` to complete before running (3:20pm MT)
+- **nba_feature_dag**: Builds player prop features from Postgres and writes daily Parquet files; waits for `nba_stats_pipeline` (3:40pm MT)
+- **nba_score_dag**: Loads the production XGBoost model from MLflow and scores today's props; writes ranked recommendations to Postgres (4pm MT)
+- **nba_train_dag**: Trains the XGBoost model weekly on historical features/labels and promotes the best model in MLflow (Mondays 10am MT)
 - **nba_odds_backfill**: On-demand historical odds data seeding (manual trigger only)
 - **nba_stats_backfill**: On-demand historical stats data seeding (manual trigger only)
 
@@ -80,11 +80,11 @@ In pgAdmin, connect to `data-postgres`:
 
 | DAG | Schedule | Purpose |
 |---|---|---|
-| `nba_odds_pipeline` | `0 15 * * *` (8am MT) | Fetch + transform odds, scores, and player props |
-| `nba_stats_pipeline` | `20 15 * * *` (8:20am MT) | Fetch + transform player/team stats; waits on odds pipeline |
-| `nba_feature_dag` | `40 15 * * *` (8:40am MT) | Build player prop features → Parquet; waits on stats pipeline |
-| `nba_score_dag` | `0 16 * * *` (9am MT) | Score today's props with ML model → recommendations; waits on feature dag |
-| `nba_train_dag` | `0 10 * * 1` (Mon 3am MT) | Train XGBoost model on historical data; log + promote via MLflow |
+| `nba_odds_pipeline` | `0 15 * * *` (3pm MT) | Fetch + transform odds, scores, and player props |
+| `nba_stats_pipeline` | `20 15 * * *` (3:20pm MT) | Fetch + transform player/team stats; waits on odds pipeline |
+| `nba_feature_dag` | `40 15 * * *` (3:40pm MT) | Build player prop features → Parquet; waits on stats pipeline |
+| `nba_score_dag` | `0 16 * * *` (4pm MT) | Score today's props with ML model → recommendations; waits on feature dag |
+| `nba_train_dag` | `0 10 * * 1` (Mon 10am MT) | Train XGBoost model on historical data; log + promote via MLflow |
 | `nba_odds_backfill` | Manual only | Seed historical odds data on demand |
 | `nba_stats_backfill` | Manual only | Seed historical stats data on demand |
 

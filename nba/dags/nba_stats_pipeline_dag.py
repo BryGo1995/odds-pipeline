@@ -26,12 +26,19 @@ from nba.plugins.transformers.team_season_stats import transform_team_season_sta
 from nba.plugins.transformers.teams import transform_teams
 from nba.plugins.ml.settle import settle_recommendations as _settle_recommendations
 
-CURRENT_SEASON = "2025-26"  # Update manually each season
 INGEST_DELAY_SECONDS = 1
+SEASON_START_MONTH = 10  # NBA regular season tips off in October
 
 
-def _get_current_season():
-    return CURRENT_SEASON
+def _get_current_season(today=None):
+    """Return the nba_api season string (e.g. '2026-27') for today's date.
+
+    October onward belongs to the season starting that year; earlier months
+    belong to the season that started the previous October.
+    """
+    today = today or pendulum.now("America/New_York").date()
+    start_year = today.year if today.month >= SEASON_START_MONTH else today.year - 1
+    return f"{start_year}-{(start_year + 1) % 100:02d}"
 
 
 # ---------------------------------------------------------------------------
@@ -235,7 +242,7 @@ with DAG(
     dag_id="nba_stats_pipeline",
     default_args=default_args,
     description="Fetch and transform NBA player and team stats from nba_api",
-    schedule_interval="20 15 * * *",  # 8:20am MT (3:20pm UTC)
+    schedule_interval="20 15 * * *",  # 3:20pm MT — 20 min after nba_odds_pipeline
     start_date=pendulum.datetime(2024, 1, 1, tz="America/Denver"),
     catchup=False,
     tags=["nba", "stats"],

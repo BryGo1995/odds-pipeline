@@ -208,7 +208,7 @@ with DAG(
     dag_id="nba_odds_pipeline",
     default_args=default_args,
     description="Fetch and transform NBA odds, scores, and player props from The-Odds-API",
-    schedule_interval="0 15 * * *",  # 8am MT (3pm UTC)
+    schedule_interval="0 15 * * *",  # 3:00pm MT (cron runs in start_date tz)
     start_date=pendulum.datetime(2024, 1, 1, tz="America/Denver"),
     catchup=False,
     tags=["nba", "odds"],

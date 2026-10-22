@@ -6,12 +6,13 @@ from airflow.operators.python import PythonOperator
 from airflow.sensors.external_task import ExternalTaskSensor
 
 from shared.plugins.db_client import get_data_db_conn
+from shared.plugins.slate import slate_date
 from shared.plugins.slack_notifier import notify_failure, notify_score_ready
 from mlb.plugins.ml.score import score
 
 
 def run_score(**context):
-    game_date = context["ds"]
+    game_date = slate_date(context)
     conn = get_data_db_conn()
     try:
         score(conn, game_date)
