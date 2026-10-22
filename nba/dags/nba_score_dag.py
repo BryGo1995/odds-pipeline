@@ -40,7 +40,7 @@ with DAG(
     wait_for_features = ExternalTaskSensor(
         task_id="wait_for_nba_feature_dag",
         external_dag_id="nba_feature_dag",
-        external_task_id=None,
+        external_task_id="build_features",  # don't block scoring on label_features
         mode="reschedule",
         poke_interval=60,
         timeout=3600,

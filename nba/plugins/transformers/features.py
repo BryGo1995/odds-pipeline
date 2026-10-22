@@ -6,7 +6,9 @@ build_features(conn, game_date) queries player_props and player_game_logs,
 computes rolling stats and implied probability, and returns a DataFrame
 ready to write as Parquet.
 """
-from datetime import date
+import glob
+import os
+from datetime import date, timedelta
 
 import pandas as pd
 
@@ -46,6 +48,8 @@ def build_features(conn, game_date: str) -> pd.DataFrame:
                 pp.bookmaker,
                 pp.point                                               AS line,
                 pp.price,
+                g.home_team,
+                g.away_team,
                 FIRST_VALUE(pp.point) OVER w_asc                       AS opening_line,
                 ROW_NUMBER()          OVER w_desc                      AS rn
             FROM player_props pp
@@ -70,16 +74,18 @@ def build_features(conn, game_date: str) -> pd.DataFrame:
             pw.line,
             pw.price,
             pw.line - pw.opening_line          AS line_movement,
-            pgl.matchup,
-            pgl.pts,
-            pgl.reb,
-            pgl.ast,
-            pgl.fg3m,
-            pgl.fg3a
+            -- Pre-game the only team source is the current roster; when backfilling
+            -- a played game, that game's log gives the team at the time.
+            CASE
+                WHEN t.full_name = pw.home_team THEN TRUE
+                WHEN t.full_name = pw.away_team THEN FALSE
+            END                                AS is_home
         FROM prop_windows pw
         LEFT JOIN player_game_logs pgl
                ON pgl.player_id = pw.player_id
               AND pgl.game_date  = pw.game_date
+        LEFT JOIN players p ON p.player_id = pw.player_id
+        LEFT JOIN teams t   ON t.team_id = COALESCE(pgl.team_id, p.team_id)
         WHERE pw.rn = 1
     """
     with conn.cursor() as cur:
@@ -93,18 +99,7 @@ def build_features(conn, game_date: str) -> pd.DataFrame:
     df = pd.DataFrame(rows, columns=col_names)
 
     df["implied_prob_over"] = df["price"].apply(american_odds_to_implied_prob)
-    df["is_home"] = df["matchup"].apply(
-        lambda m: True if (m and " vs. " in m) else (False if (m and " @ " in m) else None)
-    )
-    df["actual_stat_value"] = df.apply(
-        lambda r: r.get(PROP_STAT_MAP[r["prop_type"]]) if r["prop_type"] in PROP_STAT_MAP else None,
-        axis=1,
-    )
-    df["actual_result"] = df.apply(
-        lambda r: (1 if r["actual_stat_value"] > r["line"] else 0)
-        if pd.notna(r.get("actual_stat_value")) else None,
-        axis=1,
-    )
+    df = attach_labels(conn, df)
 
     player_ids = df["player_id"].dropna().unique().tolist()
     rolling_df = _compute_rolling_stats(conn, player_ids, game_date)
@@ -113,7 +108,7 @@ def build_features(conn, game_date: str) -> pd.DataFrame:
     df = df.merge(rolling_df, on=["player_id", "prop_type"], how="left")
     df = df.merge(rest_df,    on="player_id",                how="left")
 
-    drop_cols = ["matchup", "price", "pts", "reb", "ast", "fg3m", "fg3a", "game_id"]
+    drop_cols = ["price", "home_team", "away_team", "game_id"]
     df = df.drop(columns=[c for c in drop_cols if c in df.columns])
 
     cols = [
@@ -124,6 +119,78 @@ def build_features(conn, game_date: str) -> pd.DataFrame:
         "actual_result", "actual_stat_value",
     ]
     return df[[c for c in cols if c in df.columns]]
+
+
+def attach_labels(conn, df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Set actual_stat_value / actual_result for each row from player_game_logs,
+    matched on (player_id, game_date). Both are NULL when no game log exists
+    yet (game not played, or player did not play).
+    """
+    df = df.copy()
+    game_dates = pd.to_datetime(df["game_date"]).dt.date
+    player_ids = sorted({int(p) for p in df["player_id"].dropna()})
+    stat_cols = sorted(set(PROP_STAT_MAP.values()))
+
+    logs = {}
+    if player_ids:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                SELECT player_id, game_date, {", ".join(stat_cols)}
+                FROM player_game_logs
+                WHERE player_id = ANY(%s) AND game_date = ANY(%s)
+                """,
+                (player_ids, sorted(set(game_dates))),
+            )
+            for player_id, game_date, *stats in cur.fetchall():
+                logs[(player_id, game_date)] = dict(zip(stat_cols, stats))
+
+    values = []
+    for player_id, game_date, prop_type in zip(df["player_id"], game_dates, df["prop_type"]):
+        log = logs.get((int(player_id), game_date)) if pd.notna(player_id) else None
+        values.append(log.get(PROP_STAT_MAP[prop_type]) if log and prop_type in PROP_STAT_MAP else None)
+
+    df["actual_stat_value"] = values
+    df["actual_result"] = [
+        (1 if value > line else 0) if value is not None else None
+        for value, line in zip(values, df["line"])
+    ]
+    return df
+
+
+def label_feature_files(conn, features_dir: str, before_date: str, lookback_days: int | None = 7) -> int:
+    """
+    Re-attach labels to feature files for the lookback_days before before_date
+    (every file before it when lookback_days is None). Features are built
+    pre-game, so labels only exist once the stats pipeline has loaded that
+    day's game logs. Returns the number of files rewritten.
+    """
+    end = date.fromisoformat(before_date)
+    start = end - timedelta(days=lookback_days) if lookback_days is not None else None
+    rewritten = 0
+
+    for path in sorted(glob.glob(f"{features_dir}/props_features_*.parquet")):
+        file_date = date.fromisoformat(os.path.basename(path)[len("props_features_"):-len(".parquet")])
+        if file_date >= end or (start is not None and file_date < start):
+            continue
+
+        df = pd.read_parquet(path)
+        labeled = attach_labels(conn, df)
+        unchanged = all(
+            col in df.columns
+            and labeled[col].astype("Float64").equals(df[col].astype("Float64"))
+            for col in ("actual_stat_value", "actual_result")
+        )
+        if unchanged:
+            continue
+
+        tmp_path = f"{path}.tmp"
+        labeled.to_parquet(tmp_path, index=False)
+        os.replace(tmp_path, path)
+        rewritten += 1
+
+    return rewritten
 
 
 def _compute_rolling_stats(conn, player_ids: list, before_date: str) -> pd.DataFrame:

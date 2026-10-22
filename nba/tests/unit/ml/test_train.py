@@ -54,8 +54,8 @@ def test_load_training_data_filters_unlabeled(tmp_path):
     df_unlabeled = _make_synthetic_df(5)
     df_unlabeled["actual_result"] = None
 
-    pq.write_table(pa.Table.from_pandas(df_labeled),   tmp_path / "features_2026-01-01.parquet")
-    pq.write_table(pa.Table.from_pandas(df_unlabeled), tmp_path / "features_2026-01-02.parquet")
+    pq.write_table(pa.Table.from_pandas(df_labeled),   tmp_path / "props_features_2026-01-01.parquet")
+    pq.write_table(pa.Table.from_pandas(df_unlabeled), tmp_path / "props_features_2026-01-02.parquet")
 
     result = load_training_data(str(tmp_path))
     assert len(result) == 10
@@ -70,7 +70,7 @@ def test_train_model_returns_run_id(tmp_path):
     import pyarrow as pa
     import pyarrow.parquet as pq
     df = _make_synthetic_df(200)
-    pq.write_table(pa.Table.from_pandas(df), tmp_path / "features_2026-01-01.parquet")
+    pq.write_table(pa.Table.from_pandas(df), tmp_path / "props_features_2026-01-01.parquet")
 
     mock_run = MagicMock()
     mock_run.info.run_id = "test-run-id-12345"
@@ -100,7 +100,7 @@ def test_train_model_filters_by_prop_type(tmp_path):
     df.loc[:99, "prop_type"] = "player_points"
     df.loc[100:149, "prop_type"] = "player_rebounds"
     df.loc[150:, "prop_type"] = "player_assists"
-    pq.write_table(pa.Table.from_pandas(df), tmp_path / "features_2026-01-01.parquet")
+    pq.write_table(pa.Table.from_pandas(df), tmp_path / "props_features_2026-01-01.parquet")
 
     mock_run = MagicMock()
     mock_run.info.run_id = "test-run-points"
@@ -137,7 +137,7 @@ def test_train_model_uses_per_prop_features(tmp_path):
 
     df = _make_synthetic_df(200)
     df["prop_type"] = "player_points"
-    pq.write_table(pa.Table.from_pandas(df), tmp_path / "features_2026-01-01.parquet")
+    pq.write_table(pa.Table.from_pandas(df), tmp_path / "props_features_2026-01-01.parquet")
 
     mock_run = MagicMock()
     mock_run.info.run_id = "test-run"
@@ -168,7 +168,7 @@ def test_train_model_skips_insufficient_data(tmp_path):
 
     df = _make_synthetic_df(30)
     df["prop_type"] = "player_points"
-    pq.write_table(pa.Table.from_pandas(df), tmp_path / "features_2026-01-01.parquet")
+    pq.write_table(pa.Table.from_pandas(df), tmp_path / "props_features_2026-01-01.parquet")
 
     with pytest.raises(ValueError, match="Insufficient"):
         train_model(str(tmp_path), prop_type="player_points")
@@ -186,7 +186,7 @@ def test_train_all_models_returns_run_ids(tmp_path):
     df.loc[:99, "prop_type"] = "player_points"
     df.loc[100:199, "prop_type"] = "player_rebounds"
     df.loc[200:, "prop_type"] = "player_assists"
-    pq.write_table(pa.Table.from_pandas(df), tmp_path / "features_2026-01-01.parquet")
+    pq.write_table(pa.Table.from_pandas(df), tmp_path / "props_features_2026-01-01.parquet")
 
     call_count = [0]
     def make_mock_run():
@@ -210,3 +210,14 @@ def test_train_all_models_returns_run_ids(tmp_path):
     assert "player_rebounds" in result
     assert "player_assists" in result
     assert len(result) == 3
+
+
+def test_load_training_data_ignores_mlb_feature_files(tmp_path):
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+    from nba.plugins.ml.train import load_training_data
+
+    pq.write_table(pa.Table.from_pandas(_make_synthetic_df(10)), tmp_path / "props_features_2026-01-01.parquet")
+    pq.write_table(pa.Table.from_pandas(_make_synthetic_df(5)), tmp_path / "mlb_props_features_2026-01-01.parquet")
+
+    assert len(load_training_data(str(tmp_path))) == 10
