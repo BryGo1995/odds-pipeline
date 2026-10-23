@@ -39,6 +39,10 @@ services:
     volumes:
       - .:/workspace
       - prod-features:/data/features:ro
+    tmpfs:
+      # Hide a host-side venv/ (wrong Python, missing packages) so VS Code and
+      # Jupyter pick the container's interpreter instead of auto-selecting it
+      - /workspace/venv
     depends_on:
       dev-postgres:
         condition: service_healthy
