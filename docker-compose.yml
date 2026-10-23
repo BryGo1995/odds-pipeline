@@ -1,8 +1,13 @@
 version: '3.8'
+# Fixed project name so volumes (data-postgres-data, features-data, …) stay the
+# same whichever directory this is run from, e.g. a dedicated prod checkout.
+name: odds-pipeline
 
 x-airflow-common:
   &airflow-common
-  build: .
+  build:
+    context: .
+    target: base
   image: odds-pipeline-airflow:2.9.0
   environment:
     AIRFLOW__CORE__EXECUTOR: LocalExecutor

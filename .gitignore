@@ -12,3 +12,4 @@ dist/
 .idea/
 .vscode/
 .worktrees/
+.ipynb_checkpoints/

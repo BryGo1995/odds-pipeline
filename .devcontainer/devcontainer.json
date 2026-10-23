@@ -1,0 +1,18 @@
+{
+  "name": "odds-pipeline dev",
+  "dockerComposeFile": ["../docker-compose.dev.yml"],
+  "service": "dev",
+  "workspaceFolder": "/workspace",
+  "overrideCommand": false,
+  "shutdownAction": "none",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python", "ms-toolsai.jupyter"],
+      "settings": {
+        "python.defaultInterpreterPath": "/home/airflow/.local/bin/python",
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestArgs": ["nba/tests/unit", "shared/tests"]
+      }
+    }
+  }
+}

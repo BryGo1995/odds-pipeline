@@ -131,11 +131,52 @@ That's it — all pipeline DAGs will automatically post a message on each succes
 
 If `SLACK_WEBHOOK_URL` is not set, notifications are silently skipped.
 
+## Development environment
+
+Experiments, notebooks and tests run in a separate compose project (`odds-dev`), not in the production stack. Nothing in it can write to production:
+
+| Service | What it is | Host port |
+|---|---|---|
+| `dev` | Workspace container (production image + pytest + JupyterLab), repo mounted at `/workspace`, capped to `DEV_CPUS` (default 4) | `127.0.0.1:8888` (JupyterLab) |
+| `dev-postgres` | Copy of production `odds_db`, restored from the latest backup | `127.0.0.1:5435` |
+| `dev-mlflow` | Experiment tracking, separate from the production registry | `127.0.0.1:5002` |
+
+Production feature files are mounted read-only at `/data/features`. The dev stack can't reach the production database, and it doesn't receive `ODDS_API_KEY`.
+
+```bash
+scripts/backup_db.sh                                     # dump prod odds_db to ~/odds-backups
+DEV_UID=$(id -u) docker compose -f docker-compose.dev.yml up -d --build
+scripts/dev_refresh_db.sh                                # restore the newest dump into dev-postgres
+docker compose -f docker-compose.dev.yml logs dev | grep token=   # JupyterLab URL + token
+```
+
+**VS Code over SSH:** connect with the Remote-SSH extension, open the repo folder, then run **Dev Containers: Reopen in Container**. Notebooks, the debugger and the test explorer all run inside `dev`.
+
+**Browser over SSH:** `ssh -L 8888:localhost:8888 -L 5002:localhost:5002 <host>`, then open the JupyterLab URL from the logs and MLflow at http://localhost:5002.
+
+Start with `notebooks/01_getting_started.ipynb`.
+
+### Backups
+
+`scripts/backup_db.sh` runs `pg_dump` on the production `odds_db`, checks the dump, and keeps the newest 14 in `~/odds-backups` (about 250 MB each). To run it nightly, add it to `crontab -e`:
+
+```
+0 2 * * * /path/to/odds-pipeline/scripts/backup_db.sh >> $HOME/odds-backups/backup.log 2>&1
+```
+
+For a free offsite copy, configure an [rclone](https://rclone.org) remote (e.g. Google Drive's free 15 GB) and set `RCLONE_REMOTE=gdrive:odds-backups` in the cron line. To restore into production: `docker exec -i odds-pipeline-data-postgres-1 sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner' < dump`.
+
 ## Backtesting the model
 
 `nba/plugins/ml/backtest.py` replays the weekly training recipe as a walk-forward backtest. Each 7-day fold is trained only on earlier dates. The backtest compares the model's probabilities with the de-vigged market (log loss, Brier score, AUC) and settles the top-10 pick rule at the posted Over prices. Rows are weighted so each player/date/prop counts once, even though the feature files hold one row per bookmaker and line.
 
-Run it in a throwaway, CPU-capped container rather than inside the scheduler. XGBoost uses every core it can find.
+Run it from the dev container (see above), which is CPU-capped and uses the dev database snapshot:
+
+```bash
+docker compose -f docker-compose.dev.yml exec dev python -m nba.plugins.ml.backtest
+```
+
+To run it against live production data, use a throwaway, CPU-capped container. Never run it inside the scheduler, because XGBoost uses every core it can find:
 
 ```bash
 docker run --rm --cpus=4 -e OMP_NUM_THREADS=4 --security-opt label=disable --network odds-pipeline_default --env-file .env \
@@ -144,6 +185,14 @@ docker run --rm --cpus=4 -e OMP_NUM_THREADS=4 --security-opt label=disable --net
 ```
 
 ## Running Tests
+
+In the dev container:
+
+```bash
+docker compose -f docker-compose.dev.yml exec dev pytest nba/tests/unit shared/tests
+```
+
+Or on the host:
 
 **Unit tests** (no Docker required):
 
