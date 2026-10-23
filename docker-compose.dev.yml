@@ -1,0 +1,87 @@
+# Development / experimentation stack. Its own compose project, so it never
+# touches the production containers, database or MLflow registry.
+#
+#   docker compose -f docker-compose.dev.yml up -d --build   # JupyterLab on 127.0.0.1:8888
+#   scripts/dev_refresh_db.sh                                 # load the latest prod backup
+#
+# Or open the repo in VS Code and "Reopen in Container" (.devcontainer/).
+name: odds-dev
+
+services:
+  dev:
+    build:
+      context: .
+      target: dev
+    image: odds-pipeline-dev:2.9.0
+    # Run as the host user (gid 0 is what the Airflow image expects) so files
+    # written to the workspace stay owned by you
+    user: "${DEV_UID:-1000}:0"
+    entrypoint: ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--ServerApp.root_dir=/workspace"]
+    working_dir: /workspace
+    environment:
+      HOME: /home/airflow  # the host uid has no passwd entry in the image, so Docker would set HOME=/
+      JUPYTER_TOKEN: ${JUPYTER_TOKEN:-}  # unset → random token, see `docker compose -f docker-compose.dev.yml logs dev`
+      DATA_DB_HOST: dev-postgres
+      DATA_DB_PORT: 5432
+      DATA_DB_USER: odds
+      DATA_DB_PASSWORD: odds_dev
+      DATA_DB_NAME: odds_db
+      FEATURES_DIR: /data/features
+      MLFLOW_TRACKING_URI: http://dev-mlflow:5000
+      PYTHONPATH: /workspace
+      OMP_NUM_THREADS: ${DEV_CPUS:-4}
+    # XGBoost otherwise grabs every core on the host, including the scheduler's
+    cpus: ${DEV_CPUS:-4}
+    security_opt:
+      - label=disable  # SELinux: allow the workspace bind mount
+    ports:
+      - "127.0.0.1:8888:8888"
+    volumes:
+      - .:/workspace
+      - prod-features:/data/features:ro
+    depends_on:
+      dev-postgres:
+        condition: service_healthy
+      dev-mlflow:
+        condition: service_started
+
+  dev-postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: odds
+      POSTGRES_PASSWORD: odds_dev
+      POSTGRES_DB: odds_db
+    ports:
+      - "127.0.0.1:5435:5432"
+    volumes:
+      - ./sql/init_schema.sql:/docker-entrypoint-initdb.d/init_schema.sql:ro
+      - dev-postgres-data:/var/lib/postgresql/data
+    security_opt:
+      - label=disable
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "odds"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  dev-mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.14.1
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --artifacts-destination /mlflow/artifacts
+      --default-artifact-root mlflow-artifacts:/
+      --serve-artifacts
+    ports:
+      - "127.0.0.1:5002:5000"
+    volumes:
+      - dev-mlflow-data:/mlflow
+
+volumes:
+  dev-postgres-data:
+  dev-mlflow-data:
+  prod-features:
+    external: true
+    name: odds-pipeline_features-data
