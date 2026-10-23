@@ -13,6 +13,7 @@ services:
       context: .
       target: dev
     image: odds-pipeline-dev:2.9.0
+    restart: unless-stopped
     # Run as the host user (gid 0 is what the Airflow image expects) so files
     # written to the workspace stay owned by you
     user: "${DEV_UID:-1000}:0"
@@ -51,6 +52,7 @@ services:
 
   dev-postgres:
     image: postgres:15
+    restart: unless-stopped
     environment:
       POSTGRES_USER: odds
       POSTGRES_PASSWORD: odds_dev
@@ -70,6 +72,7 @@ services:
 
   dev-mlflow:
     image: ghcr.io/mlflow/mlflow:v2.14.1
+    restart: unless-stopped
     command: >
       mlflow server
       --host 0.0.0.0
