@@ -150,7 +150,7 @@ scripts/dev_refresh_db.sh                                # restore the newest du
 docker compose -f docker-compose.dev.yml logs dev | grep token=   # JupyterLab URL + token
 ```
 
-**VS Code over SSH:** connect with the Remote-SSH extension, open the repo folder, then run **Dev Containers: Reopen in Container**. Notebooks, the debugger and the test explorer all run inside `dev`.
+**VS Code over SSH:** connect with the Remote-SSH extension, open the repo folder, then run **Dev Containers: Reopen in Container**. Notebooks, the debugger and the test explorer all run inside `dev`. After changing the Dockerfile, requirements or compose file, use **Dev Containers: Rebuild Container**; otherwise **Reopen in Container** attaches to the running one. (`initializeCommand` builds the image on the host, because Compose v5's Bake builder rejects the Dockerfile VS Code generates in `/tmp`.)
 
 **Browser over SSH:** `ssh -L 8888:localhost:8888 -L 5002:localhost:5002 <host>`, then open the JupyterLab URL from the logs and MLflow at http://localhost:5002.
 

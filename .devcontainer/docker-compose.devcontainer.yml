@@ -1,0 +1,7 @@
+# VS Code view of the dev stack. Compose v5 builds through Bake, which rejects
+# the Dockerfile the devcontainer tooling generates under /tmp ("additional
+# privileges requested: --allow=fs.read=..."). So initializeCommand builds the
+# image on the host, and this override drops `build:` so VS Code only runs it.
+services:
+  dev:
+    build: !reset null

@@ -1,6 +1,7 @@
 {
   "name": "odds-pipeline dev",
-  "dockerComposeFile": ["../docker-compose.dev.yml"],
+  "dockerComposeFile": ["../docker-compose.dev.yml", "docker-compose.devcontainer.yml"],
+  "initializeCommand": "docker compose -f docker-compose.dev.yml build dev",
   "service": "dev",
   "workspaceFolder": "/workspace",
   "overrideCommand": false,
