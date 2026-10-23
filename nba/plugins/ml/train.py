@@ -48,6 +48,15 @@ PER_PROP_FEATURES = [
     "is_home",
     "rest_days",
 ]
+XGB_PARAMS = {
+    "n_estimators":     300,
+    "max_depth":        5,
+    "learning_rate":    0.05,
+    "subsample":        0.8,
+    "colsample_bytree": 0.8,
+    "eval_metric":      "logloss",
+    "random_state":     42,
+}
 MODEL_NAME = "nba_prop_model"
 VALIDATION_DAYS = 2
 FEATURES_DIR = os.environ.get("FEATURES_DIR", "/data/features")
@@ -165,15 +174,7 @@ def train_model(features_dir: str = FEATURES_DIR, prop_type: str | None = None) 
     X_train, y_train, _ = prepare_features(train_df, features=features)
     X_val,   y_val,   _ = prepare_features(val_df, features=features)
 
-    model = xgb.XGBClassifier(
-        n_estimators=300,
-        max_depth=5,
-        learning_rate=0.05,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        eval_metric="logloss",
-        random_state=42,
-    )
+    model = xgb.XGBClassifier(**XGB_PARAMS)
     model.fit(X_train, y_train)
 
     # Calibrate probabilities — critical for reliable edge = model_prob - implied_prob

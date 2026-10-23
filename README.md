@@ -131,6 +131,18 @@ That's it — all pipeline DAGs will automatically post a message on each succes
 
 If `SLACK_WEBHOOK_URL` is not set, notifications are silently skipped.
 
+## Backtesting the model
+
+`nba/plugins/ml/backtest.py` replays the weekly training recipe as a walk-forward backtest. Each 7-day fold is trained only on earlier dates. The backtest compares the model's probabilities with the de-vigged market (log loss, Brier score, AUC) and settles the top-10 pick rule at the posted Over prices. Rows are weighted so each player/date/prop counts once, even though the feature files hold one row per bookmaker and line.
+
+Run it in a throwaway, CPU-capped container rather than inside the scheduler. XGBoost uses every core it can find.
+
+```bash
+docker run --rm --cpus=4 -e OMP_NUM_THREADS=4 --security-opt label=disable --network odds-pipeline_default --env-file .env \
+  -e DATA_DB_HOST=data-postgres -e DATA_DB_PORT=5432 -v odds-pipeline_features-data:/data/features:ro -v "$PWD":/repo:ro -w /repo \
+  --entrypoint python odds-pipeline-airflow:2.9.0 -m nba.plugins.ml.backtest --help
+```
+
 ## Running Tests
 
 **Unit tests** (no Docker required):
@@ -165,6 +177,7 @@ odds-pipeline/
 │   │   ├── ml/
 │   │   │   ├── train.py               # XGBoost training + MLflow promotion
 │   │   │   ├── score.py               # load production model + write recommendations
+│   │   │   ├── backtest.py            # walk-forward backtest vs. the market
 │   │   │   └── settle.py              # settle recommendations against game results
 │   │   └── transformers/
 │   │       ├── features.py            # player prop feature engineering
