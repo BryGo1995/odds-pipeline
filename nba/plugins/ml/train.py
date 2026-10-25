@@ -2,9 +2,10 @@
 """
 XGBoost training module for NBA player prop ML model.
 
-train_model() reads all labeled Parquet files via DuckDB, trains a calibrated
-XGBoost classifier, logs metrics to MLflow, and tags the run as
-'promotion_candidate' if ROC-AUC exceeds the current production model.
+train_model() reads all labeled Parquet files via DuckDB, trains a
+market-anchored XGBoost model (MarketAnchoredModel), logs metrics to MLflow,
+and tags the run as 'promotion_candidate' if ROC-AUC exceeds the current
+production model.
 """
 import logging
 import os
@@ -19,6 +20,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     accuracy_score,
     brier_score_loss,
+    log_loss,
     precision_score,
     recall_score,
     roc_auc_score,
@@ -48,17 +50,23 @@ PER_PROP_FEATURES = [
     "is_home",
     "rest_days",
 ]
+MARKET_FEATURE = "implied_prob_over"
+# Trees only nudge the market's probability, so they are kept tiny: 10 stumps
+# with a low learning rate, each split needing ~400 props per side. The old
+# 300 trees x depth 5 overfit ~1.5k props per prop type and scored below the
+# market it was given as a feature (#36, #44).
 XGB_PARAMS = {
-    "n_estimators":     300,
-    "max_depth":        5,
-    "learning_rate":    0.05,
+    "n_estimators":     10,
+    "max_depth":        1,
+    "learning_rate":    0.03,
+    "min_child_weight": 100,
     "subsample":        0.8,
     "colsample_bytree": 0.8,
     "eval_metric":      "logloss",
     "random_state":     42,
 }
 MODEL_NAME = "nba_prop_model"
-VALIDATION_DAYS = 14  # Platt calibration window; 2 days let isotonic map scores to 1.0 (#33)
+VALIDATION_DAYS = 14  # held-out window for the logged metrics and promotion check
 FEATURES_DIR = os.environ.get("FEATURES_DIR", "/data/features")
 MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI", "http://mlflow:5000")
 
@@ -94,11 +102,13 @@ def prepare_features(df: pd.DataFrame, features: list[str] | None = None) -> tup
             df["prop_type"].map(lambda x: x if x in le.classes_ else le.classes_[0])
         )
     df["is_home"] = df["is_home"].astype(object).fillna(0.5).astype(float)
+    # Missing values stay NaN: MarketAnchoredModel fills them with medians learned
+    # on its training rows. Filling with this frame's own median leaked test and
+    # scoring-day data into the inputs (#44).
     for col in ["rolling_avg_5g", "rolling_avg_10g", "rolling_avg_20g",
                 "rolling_std_10g", "line_movement", "rest_days"]:
         if col in df.columns:
-            numeric = pd.to_numeric(df[col], errors="coerce")
-            df[col] = numeric.fillna(numeric.median())
+            df[col] = pd.to_numeric(df[col], errors="coerce")
     use_features = features if features is not None else FEATURES
     X = df[use_features]
     if "actual_result" in df.columns and df["actual_result"].notna().all():
@@ -108,6 +118,73 @@ def prepare_features(df: pd.DataFrame, features: list[str] | None = None) -> tup
     return X, y, le
 
 
+class MarketAnchoredModel:
+    """
+    XGBoost that starts from the market instead of from zero (#44).
+
+    The market's Over probability is recalibrated with a two-parameter
+    logistic fit (logit(implied_prob_over) -> outcome), which removes the vig
+    and the books' Over bias. That logit is the XGBoost base_margin, so the
+    trees only learn corrections from the other features. With no useful
+    features the model reproduces the recalibrated market rather than falling
+    below it.
+
+    Missing feature values are filled with medians learned at fit time. If the
+    market column is absent (e.g. a backtest ablation), the anchor is the
+    training base rate.
+    """
+
+    def __init__(self, xgb_params: dict | None = None):
+        self.xgb_params = dict(XGB_PARAMS if xgb_params is None else xgb_params)
+        self.classes_ = np.array([0, 1])
+
+    def fit(self, X: pd.DataFrame, y):
+        y = np.asarray(y, dtype=int)
+        self.feature_names_ = list(X.columns)
+        self.tree_features_ = [c for c in X.columns if c != MARKET_FEATURE]
+        self.fill_values_ = X[self.tree_features_].astype(float).median()
+        if MARKET_FEATURE in X.columns:
+            self.market_ = LogisticRegression(C=1e6).fit(_logit(X[MARKET_FEATURE]), y)
+        else:
+            self.market_ = None
+            rate = np.clip(y.mean(), 1e-6, 1 - 1e-6)
+            self.base_logit_ = float(np.log(rate / (1 - rate)))
+        self.booster_ = xgb.XGBClassifier(**self.xgb_params)
+        self.booster_.fit(self._tree_inputs(X), y, base_margin=self.market_margin(X))
+        return self
+
+    def market_margin(self, X: pd.DataFrame) -> np.ndarray:
+        """Log-odds of the recalibrated market (or the base rate) for each row."""
+        if self.market_ is None:
+            return np.full(len(X), self.base_logit_)
+        return self.market_.decision_function(_logit(X[MARKET_FEATURE]))
+
+    def _tree_inputs(self, X: pd.DataFrame) -> pd.DataFrame:
+        return X[self.tree_features_].astype(float).fillna(self.fill_values_)
+
+    def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
+        X = X[self.feature_names_]
+        p = self.booster_.predict_proba(self._tree_inputs(X), base_margin=self.market_margin(X))[:, 1]
+        return np.column_stack([1 - p, p])
+
+    def predict(self, X: pd.DataFrame) -> np.ndarray:
+        return (self.predict_proba(X)[:, 1] >= 0.5).astype(int)
+
+    @property
+    def feature_importances_(self) -> dict[str, float]:
+        """Tree importances for the non-market features."""
+        return dict(zip(self.tree_features_, self.booster_.feature_importances_.tolist()))
+
+    @property
+    def market_coefficients(self) -> dict[str, float]:
+        """Recalibration of logit(implied_prob_over): logit(p) = intercept + slope * logit(implied)."""
+        if self.market_ is None:
+            return {"intercept": self.base_logit_, "slope": 0.0}
+        return {"intercept": float(self.market_.intercept_[0]), "slope": float(self.market_.coef_[0, 0])}
+
+
+# _PlattCalibrator and _CalibratedModel are the pre-#44 recipe. They stay so
+# production models registered before #44 can still be unpickled by score.py.
 class _PlattCalibrator:
     """
     Sigmoid (Platt) calibration: logistic regression on the logit of the raw
@@ -200,46 +277,36 @@ def train_model(features_dir: str = FEATURES_DIR, prop_type: str | None = None) 
     X_train, y_train, _ = prepare_features(train_df, features=features)
     X_val,   y_val,   _ = prepare_features(val_df, features=features)
 
-    model = xgb.XGBClassifier(**XGB_PARAMS)
-    model.fit(X_train, y_train)
-
-    # Calibrate probabilities — critical for reliable edge = model_prob - implied_prob
-    # Manual calibration to avoid sklearn 1.6 FrozenEstimator/__sklearn_tags__ bug
-    val_has_both_classes = len(np.unique(y_val)) >= 2
-    n_val = len(y_val)
-    min_per_class = min(np.unique(y_val, return_counts=True)[1])
-    can_calibrate = val_has_both_classes and min_per_class >= 2
-    if can_calibrate:
-        raw_prob = model.predict_proba(X_val)[:, 1]
-        calibrator = _PlattCalibrator().fit(raw_prob, y_val)
-        y_prob = calibrator.predict(raw_prob)
-        calibrated = _CalibratedModel(model, calibrator)
-    else:
-        log.warning(
-            "Validation set too small for calibration (n=%d, both_classes=%s) "
-            "— skipping calibration, using raw model probabilities.",
-            n_val, val_has_both_classes,
-        )
-        y_prob = model.predict_proba(X_val)[:, 1]
-        calibrated = model
-
+    # Fit on the training split to measure the held-out window, then refit on
+    # all labeled rows for the registered model (the backtest does the same).
+    y_prob = MarketAnchoredModel().fit(X_train, y_train).predict_proba(X_val)[:, 1]
     y_pred = (y_prob >= 0.5).astype(int)
 
+    val_has_both_classes = len(np.unique(y_val)) >= 2
     roc_auc   = roc_auc_score(y_val, y_prob) if val_has_both_classes else float("nan")
     accuracy  = accuracy_score(y_val, y_pred)
     precision = precision_score(y_val, y_pred, zero_division=0)
     recall    = recall_score(y_val, y_pred, zero_division=0)
     brier     = brier_score_loss(y_val, y_prob) if val_has_both_classes else float("nan")
+    val_log_loss = log_loss(y_val, y_prob, labels=[0, 1])
+    implied_log_loss = log_loss(y_val, X_val[MARKET_FEATURE].astype(float), labels=[0, 1]) \
+        if MARKET_FEATURE in features else float("nan")
+
+    X_all, y_all, _ = prepare_features(df, features=features)
+    model = MarketAnchoredModel().fit(X_all, y_all)
 
     prod_roc_auc = _get_production_model_auc(model_name)
 
     with mlflow.start_run() as run:
         mlflow.log_params({
-            **{k: v for k, v in model.get_params().items()
-               if k in ("n_estimators", "max_depth", "learning_rate", "subsample", "colsample_bytree")},
+            **{k: v for k, v in XGB_PARAMS.items()
+               if k in ("n_estimators", "max_depth", "learning_rate", "min_child_weight",
+                        "subsample", "colsample_bytree")},
+            "recipe":           "market_anchored_xgb",
             "validation_days":  VALIDATION_DAYS,
             "train_rows":       len(train_df),
             "val_rows":         len(val_df),
+            "final_fit_rows":   len(df),
         })
         mlflow.log_metrics({
             "roc_auc":   roc_auc,
@@ -247,13 +314,16 @@ def train_model(features_dir: str = FEATURES_DIR, prop_type: str | None = None) 
             "precision": precision,
             "recall":    recall,
             "brier_score": brier,
+            "log_loss":  val_log_loss,
+            # Raw posted price (vig included); log_loss below this = beats the price
+            "log_loss_implied": implied_log_loss,
+            **{f"market_{k}": v for k, v in model.market_coefficients.items()},
         })
         if prod_roc_auc is not None:
             mlflow.log_metric("roc_auc_delta_vs_production", roc_auc - prod_roc_auc)
 
-        importance = dict(zip(features, model.feature_importances_.tolist()))
-        mlflow.log_dict(importance, "feature_importance.json")
-        mlflow.sklearn.log_model(calibrated, artifact_path="model")
+        mlflow.log_dict(model.feature_importances_, "feature_importance.json")
+        mlflow.sklearn.log_model(model, artifact_path="model")
 
         model_uri = f"runs:/{run.info.run_id}/model"
         mlflow.register_model(model_uri, model_name)

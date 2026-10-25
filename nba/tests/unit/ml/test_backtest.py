@@ -53,13 +53,13 @@ def test_run_backtest_never_trains_on_test_fold():
     seen = []
     real_fit = bt.fit_recipe
 
-    def recording_fit(history, calibration_days, features):
+    def recording_fit(history, features):
         seen.append(history["game_date"].max())
-        return real_fit(history, calibration_days, features)
+        return real_fit(history, features)
 
     df = _make_backtest_df()
     with patch.object(bt, "fit_recipe", side_effect=recording_fit):
-        preds = bt.run_backtest(df, fold_days=7, min_train_dates=14, calibration_days=2)
+        preds = bt.run_backtest(df, fold_days=7, min_train_dates=14)
 
     assert not preds.empty
     assert preds["model_prob"].between(0, 1).all()
@@ -154,12 +154,12 @@ def test_run_backtest_uses_given_feature_set():
     features_seen = []
     real_fit = bt.fit_recipe
 
-    def recording_fit(history, calibration_days, features):
+    def recording_fit(history, features):
         features_seen.append(tuple(features))
-        return real_fit(history, calibration_days, features)
+        return real_fit(history, features)
 
     with patch.object(bt, "fit_recipe", side_effect=recording_fit):
-        preds = bt.run_backtest(_make_backtest_df(), calibration_days=2,
+        preds = bt.run_backtest(_make_backtest_df(),
                                 features=["implied_prob_over", "rest_days"])
     assert not preds.empty
     assert set(features_seen) == {("implied_prob_over", "rest_days")}
@@ -173,7 +173,12 @@ def test_permutation_importance_flags_the_feature_the_label_depends_on():
     df["actual_stat_value"] = df["line"] + np.where(df["actual_result"] == 1, 1.0, -1.0)
     df = _with_eval_columns(df)
 
-    records = permutation_importance(df, calibration_days=2, n_repeats=2)
+    # Tests the importance measurement, not the recipe: the production trees are
+    # deliberately too small to learn much from this little synthetic data.
+    from nba.plugins.ml.train import XGB_PARAMS
+    learner = {"n_estimators": 50, "max_depth": 2, "learning_rate": 0.3, "min_child_weight": 1}
+    with patch.dict(XGB_PARAMS, learner):
+        records = permutation_importance(df, n_repeats=2)
     assert set(records.columns) == {"fold_start", "prop_type", "feature", "n_props", "delta_log_loss"}
 
     overall = importance_summary(records, by=None)
@@ -188,7 +193,7 @@ def test_permutation_importance_excludes_pushes():
     from nba.plugins.ml.backtest import permutation_importance
     df = _with_eval_columns(_make_backtest_df())
     df["push"] = True
-    assert permutation_importance(df, calibration_days=2, n_repeats=1).empty
+    assert permutation_importance(df, n_repeats=1).empty
 
 
 def test_importance_summary_weights_folds_by_props():
@@ -225,7 +230,7 @@ def test_ablation_variants_drop_each_feature_and_group():
 def test_ablation_reports_deltas_against_full_set():
     from nba.plugins.ml.backtest import ablation
     df = _with_eval_columns(_make_backtest_df())
-    result = ablation(df, calibration_days=2, features=["implied_prob_over", "rest_days", "is_home"])
+    result = ablation(df, features=["implied_prob_over", "rest_days", "is_home"])
     assert list(result["variant"]) == ["full", "-implied_prob_over", "-rest_days", "-is_home"]
     full = result.iloc[0]
     assert full["d_log_loss"] == 0 and full["d_auc"] == 0
