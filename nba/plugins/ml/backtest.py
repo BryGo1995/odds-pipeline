@@ -14,10 +14,17 @@ type), settled at the posted Over price.
 Feature rows are duplicated per bookmaker/line, so every metric weights rows
 so that each (player, game_date, prop_type) counts once.
 
+--importance adds walk-forward permutation importance: each fold's model is
+scored on its own test rows with one feature shuffled, so importance is
+measured out of sample with the same folds as the backtest. --ablate re-runs
+the backtest with each feature (or group) left out and compares the result
+with the full feature set; this is the keep/drop test for features (#36).
+
 Run against live data with the Airflow image (see README "Backtesting the
 model"), capped to a few cores. XGBoost grabs every core, so running this
 inside the scheduler starves the live DAGs:
-    python -m nba.plugins.ml.backtest [--fold-days 7] [--min-train-dates 14] [--calibration-days 2] [--out preds.csv]
+    python -m nba.plugins.ml.backtest [--fold-days 7] [--min-train-dates 14] [--calibration-days 14]
+        [--importance] [--ablate] [--drop-features a,b] [--out preds.csv]
 """
 import argparse
 import logging
@@ -45,6 +52,12 @@ log = logging.getLogger(__name__)
 GROUP_KEYS = ["player_id", "game_date", "prop_type"]
 MIN_TRAIN_ROWS = 50  # matches train_model's per-prop minimum
 _EPS = 1e-6
+
+# Features left out together by --ablate, on top of one run per single feature
+ABLATION_GROUPS = {
+    "rolling_avg_5g+20g": ["rolling_avg_5g", "rolling_avg_20g"],
+    "all_rolling":        ["rolling_avg_5g", "rolling_avg_10g", "rolling_avg_20g", "rolling_std_10g"],
+}
 
 
 def attach_market_probs(conn, df: pd.DataFrame) -> pd.DataFrame:
@@ -115,7 +128,8 @@ def make_folds(dates, fold_days: int, min_train_dates: int) -> list[tuple[pd.Tim
     return folds
 
 
-def fit_recipe(history: pd.DataFrame, calibration_days: int = VALIDATION_DAYS):
+def fit_recipe(history: pd.DataFrame, calibration_days: int = VALIDATION_DAYS,
+               features: list[str] = PER_PROP_FEATURES):
     """
     Fit the train_model recipe on history: XGBoost on all but the last
     calibration_days, Platt calibration on those days. Returns None when
@@ -127,13 +141,13 @@ def fit_recipe(history: pd.DataFrame, calibration_days: int = VALIDATION_DAYS):
     if len(fit_df) < MIN_TRAIN_ROWS or fit_df["actual_result"].nunique() < 2:
         return None
 
-    X_fit, y_fit, _ = prepare_features(fit_df, features=PER_PROP_FEATURES)
+    X_fit, y_fit, _ = prepare_features(fit_df, features=features)
     model = xgb.XGBClassifier(**XGB_PARAMS)
     model.fit(X_fit, y_fit)
 
     if cal_df.empty:
         return model
-    X_cal, y_cal, _ = prepare_features(cal_df, features=PER_PROP_FEATURES)
+    X_cal, y_cal, _ = prepare_features(cal_df, features=features)
     classes, counts = np.unique(y_cal, return_counts=True)
     if len(classes) < 2 or counts.min() < 2:
         return model
@@ -141,36 +155,152 @@ def fit_recipe(history: pd.DataFrame, calibration_days: int = VALIDATION_DAYS):
     return _CalibratedModel(model, calibrator)
 
 
-def run_backtest(
-    df: pd.DataFrame,
-    fold_days: int = 7,
-    min_train_dates: int = 14,
-    calibration_days: int = VALIDATION_DAYS,
-) -> pd.DataFrame:
+def _walk_forward(df, fold_days, min_train_dates, calibration_days, features):
     """
-    Walk-forward predictions for every labeled row in a test fold.
-    Returns the test rows with fold_start and model_prob columns added.
+    Yield (fold_start, prop_type, model, test, X_test) for every fold and prop
+    type with enough history, fitting the recipe on dates before the fold only.
     """
     df = df.copy()
     df["game_date"] = pd.to_datetime(df["game_date"])
-    folds = make_folds(df["game_date"], fold_days, min_train_dates)
-
-    out = []
-    for fold_start, fold_end in folds:
+    for fold_start, fold_end in make_folds(df["game_date"], fold_days, min_train_dates):
         for prop_type, prop_df in df.groupby("prop_type"):
             history = prop_df[prop_df["game_date"] < fold_start]
             test = prop_df[(prop_df["game_date"] >= fold_start) & (prop_df["game_date"] < fold_end)]
             if test.empty:
                 continue
-            model = fit_recipe(history, calibration_days)
+            model = fit_recipe(history, calibration_days, features)
             if model is None:
                 log.info("Skipping %s fold %s: not enough history", prop_type, fold_start.date())
                 continue
-            X_test, _, _ = prepare_features(test, features=PER_PROP_FEATURES)
-            test = test.assign(fold_start=fold_start, model_prob=model.predict_proba(X_test)[:, 1])
-            out.append(test)
+            X_test, _, _ = prepare_features(test, features=features)
+            yield fold_start, prop_type, model, test, X_test
 
+
+def run_backtest(
+    df: pd.DataFrame,
+    fold_days: int = 7,
+    min_train_dates: int = 14,
+    calibration_days: int = VALIDATION_DAYS,
+    features: list[str] = PER_PROP_FEATURES,
+) -> pd.DataFrame:
+    """
+    Walk-forward predictions for every labeled row in a test fold.
+    Returns the test rows with fold_start and model_prob columns added.
+    """
+    out = [
+        test.assign(fold_start=fold_start, model_prob=model.predict_proba(X_test)[:, 1])
+        for fold_start, _, model, test, X_test
+        in _walk_forward(df, fold_days, min_train_dates, calibration_days, features)
+    ]
     return pd.concat(out, ignore_index=True) if out else pd.DataFrame()
+
+
+def permutation_importance(
+    df: pd.DataFrame,
+    fold_days: int = 7,
+    min_train_dates: int = 14,
+    calibration_days: int = VALIDATION_DAYS,
+    features: list[str] = PER_PROP_FEATURES,
+    n_repeats: int = 5,
+    seed: int = 42,
+) -> pd.DataFrame:
+    """
+    Out-of-sample permutation importance: for each fold and prop type, the
+    increase in weighted log loss on the fold's test rows when one feature is
+    shuffled (mean over n_repeats). Pushes are excluded. Positive = the model
+    relies on the feature; around zero or negative = it adds nothing.
+    Returns one row per (fold_start, prop_type, feature).
+    """
+    rng = np.random.default_rng(seed)
+    records = []
+    for fold_start, prop_type, model, test, X_test in _walk_forward(
+        df, fold_days, min_train_dates, calibration_days, features
+    ):
+        keep = ~test["push"].to_numpy()
+        X, y, w = X_test[keep], test["actual_result"].astype(int)[keep], test["weight"][keep]
+        if len(X) == 0:
+            continue
+        base = _weighted_log_loss(y, model.predict_proba(X)[:, 1], w)
+        for feature in features:
+            losses = []
+            for _ in range(n_repeats):
+                shuffled = X.copy()
+                shuffled[feature] = rng.permutation(shuffled[feature].to_numpy())
+                losses.append(_weighted_log_loss(y, model.predict_proba(shuffled)[:, 1], w))
+            records.append({
+                "fold_start":     fold_start,
+                "prop_type":      prop_type,
+                "feature":        feature,
+                "n_props":        float(w.sum()),
+                "delta_log_loss": float(np.mean(losses)) - base,
+            })
+    return pd.DataFrame(records)
+
+
+def importance_summary(records: pd.DataFrame, by: str | None = "prop_type") -> pd.DataFrame:
+    """
+    Aggregate permutation_importance across folds, weighting each fold by its
+    props: mean delta log loss, its standard error across folds, and the share
+    of folds where shuffling the feature hurt.
+    """
+    keys = ["feature"] if by is None else [by, "feature"]
+    rows = []
+    for key, g in records.groupby(keys):
+        w = g["n_props"] / g["n_props"].sum()
+        mean = float((g["delta_log_loss"] * w).sum())
+        se = float(g["delta_log_loss"].std(ddof=1) / np.sqrt(len(g))) if len(g) > 1 else float("nan")
+        rows.append({
+            **dict(zip(keys, key if isinstance(key, tuple) else (key,))),
+            "folds":            len(g),
+            "delta_log_loss":   mean,
+            "se":               se,
+            "share_folds_hurt": float((g["delta_log_loss"] > 0).mean()),
+        })
+    result = pd.DataFrame(rows)
+    sort = ["delta_log_loss"] if by is None else [by, "delta_log_loss"]
+    return result.sort_values(sort, ascending=[True] * (len(sort) - 1) + [False], ignore_index=True)
+
+
+def ablation_variants(features: list[str] = PER_PROP_FEATURES) -> dict[str, list[str]]:
+    """Feature sets for --ablate: the full set, minus each feature, minus each ABLATION_GROUPS group."""
+    variants = {"full": list(features)}
+    for feature in features:
+        variants[f"-{feature}"] = [f for f in features if f != feature]
+    for name, group in ABLATION_GROUPS.items():
+        if set(group) <= set(features):
+            variants[f"-{name}"] = [f for f in features if f not in group]
+    return variants
+
+
+def ablation(
+    df: pd.DataFrame,
+    fold_days: int = 7,
+    min_train_dates: int = 14,
+    calibration_days: int = VALIDATION_DAYS,
+    features: list[str] = PER_PROP_FEATURES,
+) -> pd.DataFrame:
+    """
+    Re-run the backtest once per ablation_variants() feature set. Deltas are
+    against the full set: d_log_loss > 0 means leaving the feature out made
+    the model worse, i.e. it earns its place.
+    """
+    rows = []
+    for name, feature_set in ablation_variants(features).items():
+        preds = run_backtest(df, fold_days, min_train_dates, calibration_days, feature_set)
+        overall = probability_metrics(preds, by=None).iloc[0]
+        picks = betting_summary(replay_picks(preds)).iloc[0]
+        rows.append({
+            "variant":        name,
+            "log_loss_model": overall["log_loss_model"],
+            "log_loss_delta": overall["log_loss_delta"],
+            "auc_model":      overall["auc_model"],
+            "pick_roi":       picks["roi"],
+        })
+    result = pd.DataFrame(rows)
+    full = result.iloc[0]
+    result["d_log_loss"] = result["log_loss_model"] - full["log_loss_model"]
+    result["d_auc"] = result["auc_model"] - full["auc_model"]
+    return result
 
 
 def _weighted_log_loss(y, p, w) -> float:
@@ -271,8 +401,20 @@ def main(argv=None):
     parser.add_argument("--fold-days", type=int, default=7)
     parser.add_argument("--min-train-dates", type=int, default=14)
     parser.add_argument("--calibration-days", type=int, default=VALIDATION_DAYS)
+    parser.add_argument("--drop-features", default="",
+                        help="comma-separated features to leave out of the model")
+    parser.add_argument("--importance", action="store_true",
+                        help="add walk-forward permutation importance per prop type")
+    parser.add_argument("--ablate", action="store_true",
+                        help="re-run once per left-out feature/group and compare with the full set")
     parser.add_argument("--out", help="write per-row test predictions to this CSV")
     args = parser.parse_args(argv)
+
+    dropped = {f for f in args.drop_features.split(",") if f}
+    unknown = dropped - set(PER_PROP_FEATURES)
+    if unknown:
+        parser.error(f"unknown features: {', '.join(sorted(unknown))}")
+    features = [f for f in PER_PROP_FEATURES if f not in dropped]
     logging.basicConfig(level=logging.WARNING)
 
     conn = get_data_db_conn()
@@ -282,7 +424,7 @@ def main(argv=None):
         conn.close()
     df = add_eval_columns(df)
 
-    preds = run_backtest(df, args.fold_days, args.min_train_dates, args.calibration_days)
+    preds = run_backtest(df, args.fold_days, args.min_train_dates, args.calibration_days, features)
     if preds.empty:
         print("No folds to evaluate — not enough labeled dates.")
         return
@@ -292,6 +434,8 @@ def main(argv=None):
     pd.set_option("display.max_columns", 30)
     pd.set_option("display.float_format", "{:.4f}".format)
 
+    if dropped:
+        print(f"Features dropped: {', '.join(sorted(dropped))}")
     print(f"Walk-forward: {preds['fold_start'].nunique()} folds of {args.fold_days}d, "
           f"{preds['game_date'].min().date()} → {preds['game_date'].max().date()}, "
           f"calibration_days={args.calibration_days}, "
@@ -306,6 +450,18 @@ def main(argv=None):
           .to_string(index=False), "\n")
     print("Top-10 picks by fold")
     print(betting_summary(picks.assign(fold=picks["fold_start"].dt.date), by="fold").to_string(index=False))
+
+    fold_args = (args.fold_days, args.min_train_dates, args.calibration_days, features)
+    if args.importance:
+        records = permutation_importance(df, *fold_args)
+        print("\nPermutation importance (out of sample): log loss increase when the feature is shuffled")
+        print(importance_summary(records, by=None).to_string(index=False), "\n")
+        print(importance_summary(records).to_string(index=False))
+
+    if args.ablate:
+        print("\nAblation: backtest with each feature/group left out "
+              "(d_log_loss > 0 = worse without it, so keep)")
+        print(ablation(df, *fold_args).to_string(index=False))
 
     if args.out:
         preds.to_csv(args.out, index=False)

@@ -176,6 +176,14 @@ Run it from the dev container (see above), which is CPU-capped and uses the dev 
 docker compose -f docker-compose.dev.yml exec dev python -m nba.plugins.ml.backtest
 ```
 
+To evaluate features, add these flags. Each one reuses the same walk-forward folds, so every number is out of sample:
+
+- `--importance` reports permutation importance: how much each fold's log loss on its own test rows gets worse when one feature is shuffled. Results are given overall and per prop type, with a standard error across folds.
+- `--ablate` re-runs the backtest once per left-out feature (and per group in `ABLATION_GROUPS`) and compares the result with the full set. `d_log_loss > 0` means the model is worse without that feature. This is the keep/drop test for new features.
+- `--drop-features a,b` runs the whole backtest without the listed features.
+
+With roughly 5k scored props, differences under about 0.002 log loss or 0.01 AUC are noise, and so are pick-ROI swings of ±5% over a few hundred bets.
+
 To run it against live production data, use a throwaway, CPU-capped container. Never run it inside the scheduler, because XGBoost uses every core it can find:
 
 ```bash
