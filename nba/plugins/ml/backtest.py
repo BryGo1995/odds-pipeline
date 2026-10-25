@@ -3,9 +3,9 @@
 Walk-forward backtest for the NBA per-prop-type models.
 
 Replays the production training recipe (train.py) fold by fold: each fold
-trains on every labeled date before it, calibrates on the last
-calibration_days of that history, and predicts the fold. Nothing a fold is
-scored on was seen during fitting or calibration.
+fits MarketAnchoredModel on every labeled date before it and predicts the
+fold. Nothing a fold is scored on was seen during fitting, including the
+medians used to fill missing values.
 
 Predictions are compared against the de-vigged market probability and run
 through the production pick rule (top-N by edge, slots allocated per prop
@@ -23,7 +23,7 @@ with the full feature set; this is the keep/drop test for features (#36).
 Run against live data with the Airflow image (see README "Backtesting the
 model"), capped to a few cores. XGBoost grabs every core, so running this
 inside the scheduler starves the live DAGs:
-    python -m nba.plugins.ml.backtest [--fold-days 7] [--min-train-dates 14] [--calibration-days 14]
+    python -m nba.plugins.ml.backtest [--fold-days 7] [--min-train-dates 14]
         [--importance] [--ablate] [--drop-features a,b] [--out preds.csv]
 """
 import argparse
@@ -31,17 +31,13 @@ import logging
 
 import numpy as np
 import pandas as pd
-import xgboost as xgb
 from sklearn.metrics import roc_auc_score
 
 from nba.plugins.ml.score import TOP_N, _allocate_slots
 from nba.plugins.ml.train import (
     FEATURES_DIR,
     PER_PROP_FEATURES,
-    VALIDATION_DAYS,
-    XGB_PARAMS,
-    _CalibratedModel,
-    _PlattCalibrator,
+    MarketAnchoredModel,
     load_training_data,
     prepare_features,
 )
@@ -128,34 +124,18 @@ def make_folds(dates, fold_days: int, min_train_dates: int) -> list[tuple[pd.Tim
     return folds
 
 
-def fit_recipe(history: pd.DataFrame, calibration_days: int = VALIDATION_DAYS,
-               features: list[str] = PER_PROP_FEATURES):
+def fit_recipe(history: pd.DataFrame, features: list[str] = PER_PROP_FEATURES):
     """
-    Fit the train_model recipe on history: XGBoost on all but the last
-    calibration_days, Platt calibration on those days. Returns None when
-    there isn't enough data to train.
+    Fit the train_model recipe (MarketAnchoredModel) on history. Returns None
+    when there isn't enough data to train.
     """
-    cutoff = history["game_date"].max() - pd.Timedelta(days=calibration_days)
-    fit_df = history[history["game_date"] <= cutoff]
-    cal_df = history[history["game_date"] > cutoff]
-    if len(fit_df) < MIN_TRAIN_ROWS or fit_df["actual_result"].nunique() < 2:
+    if len(history) < MIN_TRAIN_ROWS or history["actual_result"].nunique() < 2:
         return None
-
-    X_fit, y_fit, _ = prepare_features(fit_df, features=features)
-    model = xgb.XGBClassifier(**XGB_PARAMS)
-    model.fit(X_fit, y_fit)
-
-    if cal_df.empty:
-        return model
-    X_cal, y_cal, _ = prepare_features(cal_df, features=features)
-    classes, counts = np.unique(y_cal, return_counts=True)
-    if len(classes) < 2 or counts.min() < 2:
-        return model
-    calibrator = _PlattCalibrator().fit(model.predict_proba(X_cal)[:, 1], y_cal)
-    return _CalibratedModel(model, calibrator)
+    X, y, _ = prepare_features(history, features=features)
+    return MarketAnchoredModel().fit(X, y)
 
 
-def _walk_forward(df, fold_days, min_train_dates, calibration_days, features):
+def _walk_forward(df, fold_days, min_train_dates, features):
     """
     Yield (fold_start, prop_type, model, test, X_test) for every fold and prop
     type with enough history, fitting the recipe on dates before the fold only.
@@ -168,7 +148,7 @@ def _walk_forward(df, fold_days, min_train_dates, calibration_days, features):
             test = prop_df[(prop_df["game_date"] >= fold_start) & (prop_df["game_date"] < fold_end)]
             if test.empty:
                 continue
-            model = fit_recipe(history, calibration_days, features)
+            model = fit_recipe(history, features)
             if model is None:
                 log.info("Skipping %s fold %s: not enough history", prop_type, fold_start.date())
                 continue
@@ -180,7 +160,6 @@ def run_backtest(
     df: pd.DataFrame,
     fold_days: int = 7,
     min_train_dates: int = 14,
-    calibration_days: int = VALIDATION_DAYS,
     features: list[str] = PER_PROP_FEATURES,
 ) -> pd.DataFrame:
     """
@@ -190,7 +169,7 @@ def run_backtest(
     out = [
         test.assign(fold_start=fold_start, model_prob=model.predict_proba(X_test)[:, 1])
         for fold_start, _, model, test, X_test
-        in _walk_forward(df, fold_days, min_train_dates, calibration_days, features)
+        in _walk_forward(df, fold_days, min_train_dates, features)
     ]
     return pd.concat(out, ignore_index=True) if out else pd.DataFrame()
 
@@ -199,7 +178,6 @@ def permutation_importance(
     df: pd.DataFrame,
     fold_days: int = 7,
     min_train_dates: int = 14,
-    calibration_days: int = VALIDATION_DAYS,
     features: list[str] = PER_PROP_FEATURES,
     n_repeats: int = 5,
     seed: int = 42,
@@ -214,7 +192,7 @@ def permutation_importance(
     rng = np.random.default_rng(seed)
     records = []
     for fold_start, prop_type, model, test, X_test in _walk_forward(
-        df, fold_days, min_train_dates, calibration_days, features
+        df, fold_days, min_train_dates, features
     ):
         keep = ~test["push"].to_numpy()
         X, y, w = X_test[keep], test["actual_result"].astype(int)[keep], test["weight"][keep]
@@ -276,7 +254,6 @@ def ablation(
     df: pd.DataFrame,
     fold_days: int = 7,
     min_train_dates: int = 14,
-    calibration_days: int = VALIDATION_DAYS,
     features: list[str] = PER_PROP_FEATURES,
 ) -> pd.DataFrame:
     """
@@ -286,7 +263,7 @@ def ablation(
     """
     rows = []
     for name, feature_set in ablation_variants(features).items():
-        preds = run_backtest(df, fold_days, min_train_dates, calibration_days, feature_set)
+        preds = run_backtest(df, fold_days, min_train_dates, feature_set)
         overall = probability_metrics(preds, by=None).iloc[0]
         picks = betting_summary(replay_picks(preds)).iloc[0]
         rows.append({
@@ -400,7 +377,6 @@ def main(argv=None):
     parser.add_argument("--features-dir", default=FEATURES_DIR)
     parser.add_argument("--fold-days", type=int, default=7)
     parser.add_argument("--min-train-dates", type=int, default=14)
-    parser.add_argument("--calibration-days", type=int, default=VALIDATION_DAYS)
     parser.add_argument("--drop-features", default="",
                         help="comma-separated features to leave out of the model")
     parser.add_argument("--importance", action="store_true",
@@ -424,7 +400,7 @@ def main(argv=None):
         conn.close()
     df = add_eval_columns(df)
 
-    preds = run_backtest(df, args.fold_days, args.min_train_dates, args.calibration_days, features)
+    preds = run_backtest(df, args.fold_days, args.min_train_dates, features)
     if preds.empty:
         print("No folds to evaluate — not enough labeled dates.")
         return
@@ -438,7 +414,6 @@ def main(argv=None):
         print(f"Features dropped: {', '.join(sorted(dropped))}")
     print(f"Walk-forward: {preds['fold_start'].nunique()} folds of {args.fold_days}d, "
           f"{preds['game_date'].min().date()} → {preds['game_date'].max().date()}, "
-          f"calibration_days={args.calibration_days}, "
           f"{len(preds)} rows / {round(preds['weight'].sum())} unique props, "
           f"{preds['fair_prob_over'].isna().mean():.1%} without a fair price, "
           f"{preds['push'].mean():.1%} pushes\n")
@@ -451,7 +426,7 @@ def main(argv=None):
     print("Top-10 picks by fold")
     print(betting_summary(picks.assign(fold=picks["fold_start"].dt.date), by="fold").to_string(index=False))
 
-    fold_args = (args.fold_days, args.min_train_dates, args.calibration_days, features)
+    fold_args = (args.fold_days, args.min_train_dates, features)
     if args.importance:
         records = permutation_importance(df, *fold_args)
         print("\nPermutation importance (out of sample): log loss increase when the feature is shuffled")
