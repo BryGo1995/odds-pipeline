@@ -46,3 +46,43 @@ def test_transform_team_game_logs_uses_on_conflict():
     transform_team_game_logs(mock_conn, [SAMPLE_LOG])
     sql = mock_cursor.execute.call_args[0][0]
     assert "ON CONFLICT" in sql.upper()
+
+
+BOX_SCORE = {
+    "min": 240, "fgm": 41, "fga": 88, "fg3m": 12, "fg3a": 35, "ftm": 16, "fta": 20,
+    "oreb": 9, "dreb": 33, "reb": 42, "ast": 27, "stl": 7, "blk": 5, "tov": 13, "pf": 19,
+}
+
+
+def test_transform_team_game_logs_passes_box_score_columns():
+    from nba.plugins.transformers.team_game_logs import transform_team_game_logs
+    mock_conn, mock_cursor = _make_mock_conn()
+    transform_team_game_logs(mock_conn, [{**SAMPLE_LOG, **BOX_SCORE}])
+    sql, args = mock_cursor.execute.call_args[0]
+    insert_cols = [c.strip() for c in sql.split("(", 1)[1].split(")", 1)[0].split(",")]
+    row = dict(zip(insert_cols, args))
+    for col, value in BOX_SCORE.items():
+        assert row[col] == value
+
+
+def test_transform_team_game_logs_missing_box_score_is_null():
+    from nba.plugins.transformers.team_game_logs import transform_team_game_logs
+    mock_conn, mock_cursor = _make_mock_conn()
+    transform_team_game_logs(mock_conn, [SAMPLE_LOG])
+    args = mock_cursor.execute.call_args[0][1]
+    assert args[9:] == (None,) * len(BOX_SCORE)
+
+
+def test_transform_team_game_logs_upserts_box_score_on_conflict():
+    """Re-fetching a season must fill box score columns on existing rows."""
+    from nba.plugins.transformers.team_game_logs import transform_team_game_logs
+    mock_conn, mock_cursor = _make_mock_conn()
+    transform_team_game_logs(mock_conn, [SAMPLE_LOG])
+    sql = " ".join(mock_cursor.execute.call_args[0][0].split())
+    assert "ON CONFLICT (team_id, nba_game_id) DO UPDATE SET" in sql
+    set_clause = sql.split("DO UPDATE SET", 1)[1]
+    for col in BOX_SCORE:
+        assert f"{col} = EXCLUDED.{col}" in set_clause
+    assert "team_id =" not in set_clause
+    assert "nba_game_id =" not in set_clause
+    mock_conn.commit.assert_called_once()
