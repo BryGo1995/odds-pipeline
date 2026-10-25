@@ -18,6 +18,7 @@ def run_backfill(**context):
     params = context["params"]
     date_from = date.fromisoformat(params["date_from"])
     date_to   = date.fromisoformat(params["date_to"])
+    overwrite = params.get("overwrite", False)
 
     conn = get_data_db_conn()
     try:
@@ -26,7 +27,7 @@ def run_backfill(**context):
             game_date = current.isoformat()
             output_path = f"{FEATURES_DIR}/props_features_{game_date}.parquet"
 
-            if os.path.exists(output_path):
+            if os.path.exists(output_path) and not overwrite:
                 log.info("Skipping %s — file already exists", game_date)
                 current += timedelta(days=1)
                 continue
@@ -35,7 +36,10 @@ def run_backfill(**context):
             if df.empty:
                 log.info("No prop data for %s — skipping", game_date)
             else:
-                df.to_parquet(output_path, index=False)
+                # Write then rename, so the score/train DAGs never read a half-written file
+                tmp_path = f"{output_path}.tmp"
+                df.to_parquet(tmp_path, index=False)
+                os.replace(tmp_path, output_path)
                 log.info("Wrote %d rows to %s", len(df), output_path)
 
             current += timedelta(days=1)
@@ -60,6 +64,8 @@ with DAG(
     params={
         "date_from": Param(..., type="string", description="Start date YYYY-MM-DD"),
         "date_to":   Param(..., type="string", description="End date YYYY-MM-DD"),
+        "overwrite": Param(False, type="boolean",
+                           description="Rebuild dates that already have a feature file"),
     },
 ) as dag:
     PythonOperator(task_id="run_backfill", python_callable=run_backfill)

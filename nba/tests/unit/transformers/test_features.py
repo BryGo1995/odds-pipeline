@@ -124,3 +124,15 @@ def test_label_feature_files_relabels_only_past_unlabeled_files(tmp_path):
 
     # Second pass: nothing changed, nothing rewritten
     assert label_feature_files(mock_conn, str(tmp_path), before_date="2026-10-22") == 0
+
+
+def test_compute_rolling_stats_excludes_preseason_and_all_star_games():
+    """Rolling windows skip 001 preseason and 003 All-Star game IDs (#19)."""
+    from nba.plugins.transformers.features import _compute_rolling_stats, ROLLING_EXCLUDED_GAME_TYPES
+    mock_conn, mock_cursor = _make_mock_conn([], ["player_id", "game_date", "pts", "reb", "ast", "fg3m", "fg3a"])
+    _compute_rolling_stats(mock_conn, [1], "2026-10-25")
+
+    sql, params = mock_cursor.execute.call_args[0]
+    assert "LEFT(nba_game_id, 3) <> ALL(%s)" in sql
+    assert params[-1] == ROLLING_EXCLUDED_GAME_TYPES
+    assert sorted(ROLLING_EXCLUDED_GAME_TYPES) == ["001", "003"]
