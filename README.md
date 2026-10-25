@@ -168,7 +168,7 @@ For a free offsite copy, configure an [rclone](https://rclone.org) remote (e.g. 
 
 ## Backtesting the model
 
-`nba/plugins/ml/backtest.py` replays the weekly training recipe as a walk-forward backtest. Each 7-day fold is trained only on earlier dates. The backtest compares the model's probabilities with the de-vigged market (log loss, Brier score, AUC) and settles the top-10 pick rule at the posted Over prices. Rows are weighted so each player/date/prop counts once, even though the feature files hold one row per bookmaker and line.
+`nba/plugins/ml/backtest.py` replays the weekly training recipe as a walk-forward backtest. Each 7-day fold is trained only on earlier dates. The backtest compares the model's probabilities with the de-vigged market (log loss, Brier score, AUC) and replays the top-10 pick rule: the better side (Over or Under) of each prop by edge, settled at that side's posted price. The same replay is also run Over-only, the rule before #45, for comparison. Rows are weighted so each player/date/prop counts once, even though the feature files hold one row per bookmaker and line.
 
 Run it from the dev container (see above), which is CPU-capped and uses the dev database snapshot:
 

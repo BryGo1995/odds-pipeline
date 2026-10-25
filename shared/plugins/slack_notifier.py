@@ -197,7 +197,8 @@ def notify_picks_settled(game_date, results: list[dict], *, sport: str) -> None:
         results:   list of dicts with keys:
                    player_name, prop_type, line, outcome, actual_result,
                    actual_stat_value, edge
-                   actual_result=None means unresolvable (DNP / postponed)
+                   actual_result=None means a push when actual_stat_value
+                   is set, else unresolvable (DNP / postponed)
         sport:     'nba' or 'mlb' — kw-only
     """
     if not _WEBHOOK_URL:
@@ -223,7 +224,8 @@ def notify_picks_settled(game_date, results: list[dict], *, sport: str) -> None:
     lines = []
     for r in results:
         prop_label = _PROP_LABELS.get(r["prop_type"], r["prop_type"])
-        line_str   = f"O {r['line']}"
+        side       = "U" if r.get("outcome") == "Under" else "O"
+        line_str   = f"{side} {r['line']}"
         edge_str   = f"{r['edge']:+.3f}" if r["edge"] is not None else "n/a"
 
         if r["actual_result"] is True:
@@ -232,6 +234,9 @@ def notify_picks_settled(game_date, results: list[dict], *, sport: str) -> None:
         elif r["actual_result"] is False:
             emoji   = "❌"
             stat_str = str(int(r["actual_stat_value"])) if r["actual_stat_value"] is not None else "—"
+        elif r["actual_stat_value"] is not None:
+            emoji   = "➖"  # push: stat landed exactly on the line
+            stat_str = str(int(r["actual_stat_value"]))
         else:
             emoji   = "❓"
             stat_str = "—"

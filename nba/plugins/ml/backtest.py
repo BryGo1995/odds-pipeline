@@ -8,8 +8,9 @@ fold. Nothing a fold is scored on was seen during fitting, including the
 medians used to fill missing values.
 
 Predictions are compared against the de-vigged market probability and run
-through the production pick rule (top-N by edge, slots allocated per prop
-type), settled at the posted Over price.
+through the production pick rule (better side of each prop by edge, top-N
+slots allocated per prop type), settled at the posted price of the side
+picked. The replay is also run Over-only for comparison (#45).
 
 Feature rows are duplicated per bookmaker/line, so every metric weights rows
 so that each (player, game_date, prop_type) counts once.
@@ -33,7 +34,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score
 
-from nba.plugins.ml.score import TOP_N, _allocate_slots
+from nba.plugins.ml.score import TOP_N, _allocate_slots, choose_side
 from nba.plugins.ml.train import (
     FEATURES_DIR,
     PER_PROP_FEATURES,
@@ -59,11 +60,14 @@ ABLATION_GROUPS = {
 def attach_market_probs(conn, df: pd.DataFrame) -> pd.DataFrame:
     """
     Add implied_prob_under and fair_prob_over (Over probability with the vig
-    removed) from the latest Over/Under snapshot in player_props. Rows with
-    no matching Under at the same line get NaN.
+    removed) from the latest Under snapshot at the same book and line in
+    player_props, as build_features does. Rows with no matching Under get NaN.
+
+    Recomputed from player_props even when the feature files carry these
+    columns, because files built before #45 don't.
     """
     query = """
-        SELECT DISTINCT ON (pp.nba_player_id, pp.game_id, pp.bookmaker, pp.prop_type)
+        SELECT DISTINCT ON (pp.nba_player_id, pp.game_id, pp.bookmaker, pp.prop_type, pp.point)
             pp.nba_player_id                                       AS player_id,
             (g.commence_time AT TIME ZONE 'America/New_York')::date AS game_date,
             pp.prop_type,
@@ -74,13 +78,13 @@ def attach_market_probs(conn, df: pd.DataFrame) -> pd.DataFrame:
         JOIN games g ON pp.game_id = g.game_id
         WHERE pp.nba_player_id IS NOT NULL
           AND pp.outcome = 'Under'
-        ORDER BY pp.nba_player_id, pp.game_id, pp.bookmaker, pp.prop_type, pp.last_update DESC
+        ORDER BY pp.nba_player_id, pp.game_id, pp.bookmaker, pp.prop_type, pp.point, pp.last_update DESC
     """
     with conn.cursor() as cur:
         cur.execute(query)
         unders = pd.DataFrame(cur.fetchall(), columns=[d[0] for d in cur.description])
 
-    df = df.copy()
+    df = df.drop(columns=["implied_prob_under", "fair_prob_over"], errors="ignore")
     df["game_date"] = pd.to_datetime(df["game_date"])
     if unders.empty:
         df["implied_prob_under"] = np.nan
@@ -327,24 +331,31 @@ def probability_metrics(preds: pd.DataFrame, by: str | None = "prop_type") -> pd
 
 
 def settle(picks: pd.DataFrame) -> pd.DataFrame:
-    """Add profit in units for a 1-unit Over bet at the posted price (push returns the stake)."""
+    """
+    Add won and profit in units for a 1-unit bet on each pick's side
+    (outcome, Over when absent) at that side's posted price (pick_implied,
+    implied_prob_over when absent). A push returns the stake.
+    """
     picks = picks.copy()
-    decimal_odds = 1.0 / picks["implied_prob_over"]
+    under = picks["outcome"].eq("Under") if "outcome" in picks else pd.Series(False, index=picks.index)
+    implied = picks["pick_implied"] if "pick_implied" in picks else picks["implied_prob_over"]
+    picks["won"] = np.where(under, picks["actual_result"] == 0, picks["actual_result"] == 1)
     picks["profit"] = np.where(
         picks["push"], 0.0,
-        np.where(picks["actual_result"] == 1, decimal_odds - 1.0, -1.0),
+        np.where(picks["won"], 1.0 / implied - 1.0, -1.0),
     )
     return picks
 
 
-def replay_picks(preds: pd.DataFrame, top_n: int = TOP_N) -> pd.DataFrame:
+def replay_picks(preds: pd.DataFrame, top_n: int = TOP_N, unders: bool = True) -> pd.DataFrame:
     """
-    Apply score()'s pick rule to each game date: edge = model_prob - implied
-    Over probability, top-N slots allocated across prop types by _allocate_slots.
-    Returns the settled picks.
+    Apply score()'s pick rule to each game date: choose_side picks the better
+    side of each prop (Over only when unders=False), then top-N slots are
+    allocated across prop types by _allocate_slots. Returns the settled picks.
     """
+    sided = preds if unders else preds.drop(columns="implied_prob_under", errors="ignore")
     picks = []
-    for _, day in preds.assign(edge=preds["model_prob"] - preds["implied_prob_over"]).groupby("game_date"):
+    for _, day in choose_side(sided).groupby("game_date"):
         ranked = {pt: g.sort_values("edge", ascending=False) for pt, g in day.groupby("prop_type")}
         top_edges = {pt: float(g["edge"].iloc[0]) for pt, g in ranked.items()}
         allocation = _allocate_slots(sorted(ranked), top_edges, top_n)
@@ -353,7 +364,10 @@ def replay_picks(preds: pd.DataFrame, top_n: int = TOP_N) -> pd.DataFrame:
 
 
 def betting_summary(picks: pd.DataFrame, by: str | None = None) -> pd.DataFrame:
-    """Hit rate (pushes excluded), mean implied probability, units won and ROI per 1-unit bet."""
+    """
+    Hit rate (pushes excluded), mean implied and model probability of the side
+    picked, units won and ROI per 1-unit bet.
+    """
     groups = picks.groupby(by) if by else [("all", picks)]
     records = []
     for key, g in groups:
@@ -361,9 +375,9 @@ def betting_summary(picks: pd.DataFrame, by: str | None = None) -> pd.DataFrame:
         records.append({
             "scope":           key,
             "bets":            len(g),
-            "hit_rate":        float(decided["actual_result"].mean()) if len(decided) else float("nan"),
-            "mean_implied":    float(g["implied_prob_over"].mean()),
-            "mean_model_prob": float(g["model_prob"].mean()),
+            "hit_rate":        float(decided["won"].mean()) if len(decided) else float("nan"),
+            "mean_implied":    float(g["pick_implied"].mean()),
+            "mean_model_prob": float(g["pick_prob"].mean()),
             "units":           float(g["profit"].sum()),
             "roi":             float(g["profit"].mean()),
         })
@@ -406,6 +420,7 @@ def main(argv=None):
         return
 
     picks = replay_picks(preds)
+    over_only = replay_picks(preds, unders=False)
     pd.set_option("display.width", 200)
     pd.set_option("display.max_columns", 30)
     pd.set_option("display.float_format", "{:.4f}".format)
@@ -420,8 +435,12 @@ def main(argv=None):
     print("Probability quality vs de-vigged market (log_loss_delta < 0 = model beats market)")
     print(pd.concat([probability_metrics(preds, by=None), probability_metrics(preds)], ignore_index=True)
           .to_string(index=False), "\n")
-    print(f"Top-{TOP_N} pick replay (1 unit per pick at posted Over price)")
-    print(pd.concat([betting_summary(picks), betting_summary(picks, by="prop_type")], ignore_index=True)
+    print(f"Top-{TOP_N} pick replay, better side of each prop (1 unit per pick at the posted price)")
+    print(pd.concat([betting_summary(picks), betting_summary(picks, by="outcome"),
+                     betting_summary(picks, by="prop_type")], ignore_index=True)
+          .to_string(index=False), "\n")
+    print(f"Top-{TOP_N} pick replay, Over only (the pre-#45 rule)")
+    print(pd.concat([betting_summary(over_only), betting_summary(over_only, by="prop_type")], ignore_index=True)
           .to_string(index=False), "\n")
     print("Top-10 picks by fold")
     print(betting_summary(picks.assign(fold=picks["fold_start"].dt.date), by="fold").to_string(index=False))

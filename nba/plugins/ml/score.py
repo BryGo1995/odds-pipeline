@@ -2,8 +2,9 @@
 Scoring module for NBA player prop ML model.
 
 score(conn, game_date) loads per-prop-type production models from the MLflow
-registry, scores today's feature Parquet file, allocates top-10 slots evenly
-across prop types, and writes ranked recommendations to Postgres.
+registry, scores today's feature Parquet file, picks the better side (Over or
+Under) of each prop, allocates top-10 slots evenly across prop types, and
+writes ranked recommendations to Postgres.
 """
 import logging
 import os
@@ -11,6 +12,7 @@ import os
 import duckdb
 import mlflow
 import mlflow.sklearn
+import numpy as np
 import pandas as pd
 
 from nba.plugins.ml.train import PER_PROP_FEATURES, FEATURES_DIR, MODEL_NAME, MLFLOW_TRACKING_URI, prepare_features
@@ -32,6 +34,29 @@ def load_todays_features(game_date: str, features_dir: str = FEATURES_DIR) -> pd
         return pd.DataFrame()
     finally:
         conn.close()
+
+
+def choose_side(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Price both sides of each prop from the model's Over probability in
+    df["model_prob"] and keep the side with the larger edge (#45). P(Under) is
+    1 - P(Over): lines are half points, so there is no push to account for.
+    The Under is only an option when the book posted one at the same line.
+
+    Adds outcome ('Over'/'Under'), pick_prob and pick_implied (the chosen
+    side's model and implied probabilities) and edge = pick_prob - pick_implied.
+    """
+    df = df.copy()
+    p_over = df["model_prob"].astype(float)
+    implied_over = df["implied_prob_over"].astype(float)
+    implied_under = (df["implied_prob_under"].astype(float) if "implied_prob_under" in df
+                     else pd.Series(np.nan, index=df.index))
+    take_under = ((1 - p_over) - implied_under) > (p_over - implied_over)  # NaN Under -> False
+    df["outcome"] = np.where(take_under, "Under", "Over")
+    df["pick_prob"] = np.where(take_under, 1 - p_over, p_over)
+    df["pick_implied"] = np.where(take_under, implied_under, implied_over)
+    df["edge"] = df["pick_prob"] - df["pick_implied"]
+    return df
 
 
 def _allocate_slots(active_prop_types: list[str], top_edges: dict[str, float], total: int = TOP_N) -> dict[str, int]:
@@ -95,9 +120,9 @@ def score(conn, game_date: str, features_dir: str = FEATURES_DIR) -> None:
 
         X, _, _ = prepare_features(subset, features=PER_PROP_FEATURES)
         subset["model_prob"] = model.predict_proba(X)[:, 1]
-        subset["outcome"] = "Over"
-        subset["implied_prob"] = subset["implied_prob_over"]
-        subset["edge"] = subset["model_prob"] - subset["implied_prob"]
+        subset = choose_side(subset)
+        subset["model_prob"] = subset["pick_prob"]
+        subset["implied_prob"] = subset["pick_implied"]
         subset["model_version"] = model_version
         subset["game_date"] = game_date
 

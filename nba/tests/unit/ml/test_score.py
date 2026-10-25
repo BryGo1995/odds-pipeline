@@ -252,3 +252,50 @@ def test_score_empty_features_returns_without_writing():
 
     assert result is None
     mock_conn.cursor.assert_not_called()
+
+
+def test_choose_side_takes_the_larger_edge():
+    from nba.plugins.ml.score import choose_side
+    df = pd.DataFrame({
+        "model_prob":         [0.60, 0.40, 0.40, 0.50],
+        "implied_prob_over":  [0.52, 0.52, 0.52, 0.50],
+        "implied_prob_under": [0.52, 0.52, np.nan, 0.50],
+    })
+    result = choose_side(df)
+    assert result["outcome"].tolist() == ["Over", "Under", "Over", "Over"]  # no Under quoted -> Over; tie -> Over
+    np.testing.assert_allclose(result["pick_prob"], [0.60, 0.60, 0.40, 0.50])
+    np.testing.assert_allclose(result["pick_implied"], [0.52, 0.52, 0.52, 0.50])
+    np.testing.assert_allclose(result["edge"], [0.08, 0.08, -0.12, 0.0], atol=1e-12)
+
+
+def test_choose_side_without_under_column_is_over_only():
+    from nba.plugins.ml.score import choose_side
+    df = pd.DataFrame({"model_prob": [0.3], "implied_prob_over": [0.5]})
+    assert choose_side(df)["outcome"].tolist() == ["Over"]
+
+
+def test_score_writes_under_picks_with_their_own_price():
+    from nba.plugins.ml.score import score
+
+    mock_conn, mock_cursor = _setup_mock_conn()
+    feature_df = _make_feature_df(n_per_type=1)
+    feature_df["implied_prob_over"] = 0.55
+    feature_df["implied_prob_under"] = 0.48
+    with patch("nba.plugins.ml.score.load_todays_features", return_value=feature_df), \
+         patch("nba.plugins.ml.score.mlflow") as mock_mlflow:
+        mock_mlflow.sklearn.load_model.return_value = _mock_model(1, prob=0.45)
+        mock_client = MagicMock()
+        mock_client.get_model_version_by_alias.return_value.version = "1"
+        mock_mlflow.tracking.MlflowClient.return_value = mock_client
+
+        score(mock_conn, "2026-03-26")
+
+    rows = [c.args[1] for c in mock_cursor.execute.call_args_list
+            if c.args and "INSERT" in str(c.args[0])]
+    assert len(rows) == 3
+    for row in rows:
+        # (player_name, prop_type, bookmaker, line, outcome, model_prob, implied_prob, edge, ...)
+        assert row[4] == "Under"
+        assert abs(row[5] - 0.55) < 1e-9   # 1 - P(Over)
+        assert abs(row[6] - 0.48) < 1e-9   # Under's implied probability
+        assert abs(row[7] - 0.07) < 1e-9

@@ -24,8 +24,8 @@ def test_settle_hits_correct_stat_column_for_points():
 
     cursor = _make_cursor(
         rows=[
-            # id, player_name, prop_type, line, game_date, pts, reb, ast, fg3m, fg3a
-            (1, "LeBron James", "player_points", 24.5, date(2026, 4, 3), 27, 8, 7, 2, 5),
+            # id, player_name, prop_type, line, game_date, outcome, pts, reb, ast, fg3m, fg3a
+            (1, "LeBron James", "player_points", 24.5, date(2026, 4, 3), "Over", 27, 8, 7, 2, 5),
         ],
         stale_ids=[],
         unsettled_newly=[],
@@ -52,7 +52,7 @@ def test_settle_records_miss():
 
     cursor = _make_cursor(
         rows=[
-            (2, "Jayson Tatum", "player_rebounds", 7.5, date(2026, 4, 3), 18, 6, 4, 1, 3),
+            (2, "Jayson Tatum", "player_rebounds", 7.5, date(2026, 4, 3), "Over", 18, 6, 4, 1, 3),
         ],
         stale_ids=[],
         unsettled_newly=[],
@@ -77,7 +77,7 @@ def test_settle_skips_unknown_prop_type():
 
     cursor = _make_cursor(
         rows=[
-            (3, "Some Player", "player_steals", 1.5, date(2026, 4, 3), 10, 5, 3, 1, 2),
+            (3, "Some Player", "player_steals", 1.5, date(2026, 4, 3), "Over", 10, 5, 3, 1, 2),
         ],
         stale_ids=[],
         unsettled_newly=[],
@@ -136,7 +136,7 @@ def test_settle_queries_are_sport_scoped():
     ]
     cursor = _make_cursor(
         rows=[
-            (1, "Player A", "player_points", 20.0, date(2026, 4, 3), 25, 5, 3, 2, 4),
+            (1, "Player A", "player_points", 20.0, date(2026, 4, 3), "Over", 25, 5, 3, 2, 4),
         ],
         stale_ids=[],
         unsettled_newly=[(date(2026, 4, 3),)],
@@ -194,7 +194,7 @@ def test_settle_sends_slack_when_top10_complete():
     ]
     cursor = _make_cursor(
         rows=[
-            (1, "Player A", "player_points", 20.0, date(2026, 4, 3), 25, 5, 3, 2, 4),
+            (1, "Player A", "player_points", 20.0, date(2026, 4, 3), "Over", 25, 5, 3, 2, 4),
         ],
         stale_ids=[],
         unsettled_newly=[(date(2026, 4, 3),)],
@@ -210,3 +210,36 @@ def test_settle_sends_slack_when_top10_complete():
     mock_notify.assert_called_once()
     call_args = mock_notify.call_args
     assert call_args.args[0] == date(2026, 4, 3)
+
+
+def _settled_result(row):
+    from nba.plugins.ml.settle import settle_recommendations
+    cursor = _make_cursor(rows=[row], stale_ids=[], unsettled_newly=[])
+    conn = MagicMock()
+    conn.cursor.return_value = cursor
+    with patch("nba.plugins.ml.settle.notify_picks_settled"):
+        settle_recommendations(conn)
+    update_calls = [
+        c for c in cursor.execute.call_args_list
+        if "UPDATE" in str(c) and "actual_result" in str(c)
+    ]
+    assert len(update_calls) == 1
+    return update_calls[0].args[1][0]
+
+
+def test_settle_under_wins_below_the_line():
+    assert _settled_result(
+        (4, "Player B", "player_assists", 6.5, date(2026, 4, 3), "Under", 10, 4, 5, 1, 2)
+    ) is True    # 5 < 6.5
+
+
+def test_settle_under_loses_above_the_line():
+    assert _settled_result(
+        (5, "Player B", "player_points", 19.5, date(2026, 4, 3), "Under", 22, 4, 5, 1, 2)
+    ) is False   # 22 > 19.5
+
+
+def test_settle_push_on_whole_number_line_is_neither_win_nor_loss():
+    assert _settled_result(
+        (6, "Player B", "player_points", 22.0, date(2026, 4, 3), "Under", 22, 4, 5, 1, 2)
+    ) is None
