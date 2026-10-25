@@ -97,6 +97,25 @@ def test_fetch_team_game_logs_returns_list_of_dicts():
     assert result[0]["plus_minus"] == -12
 
 
+def test_fetch_team_game_logs_includes_box_score():
+    from nba.plugins.nba_api_client import fetch_team_game_logs
+    df = pd.DataFrame([{
+        "TEAM_ID": 1610612743, "TEAM_ABBREVIATION": "DEN", "GAME_ID": "0022400001",
+        "GAME_DATE": "2025-01-15", "MATCHUP": "DEN @ LAL", "WL": "L",
+        "PTS": 110, "PLUS_MINUS": -12, "MIN": 265,
+        "FGM": 41, "FGA": 88, "FG_PCT": 0.466, "FG3M": 12, "FG3A": 35, "FG3_PCT": 0.343,
+        "FTM": 16, "FTA": 20, "FT_PCT": 0.8, "OREB": 9, "DREB": 33, "REB": 42,
+        "AST": 27, "STL": 7, "BLK": 5, "TOV": 13, "PF": 19,
+    }])
+    with patch("nba.plugins.nba_api_client.LeagueGameLog") as mock_cls:
+        mock_cls.return_value = _mock_endpoint(df)
+        result = fetch_team_game_logs(season="2024-25", delay_seconds=0)
+    log = result[0]
+    assert log["min"] == 265
+    assert (log["fga"], log["oreb"], log["tov"], log["fta"]) == (88, 9, 13, 20)
+    assert (log["reb"], log["ast"], log["fg3m"], log["fg3a"]) == (42, 27, 12, 35)
+    assert "fg_pct" not in log
+
 def test_fetch_team_season_stats_merges_advanced_and_opponent():
     from nba.plugins.nba_api_client import fetch_team_season_stats
     adv_df = pd.DataFrame([{

@@ -143,8 +143,16 @@ def fetch_player_game_logs(season, delay_seconds=1):
     return rows
 
 
+# Team box score counts kept from LeagueGameLog, stored as lowercase columns
+# in team_game_logs (#38). MIN is team minutes: 240, plus 25 per overtime.
+TEAM_BOX_SCORE_COLUMNS = [
+    "MIN", "FGM", "FGA", "FG3M", "FG3A", "FTM", "FTA",
+    "OREB", "DREB", "REB", "AST", "STL", "BLK", "TOV", "PF",
+]
+
+
 def fetch_team_game_logs(season, delay_seconds=1):
-    """Fetch all team game logs for a season. Returns list of dicts."""
+    """Fetch all team game logs (full box score) for a season. Returns list of dicts."""
     result = _call_with_retry(
         LeagueGameLog, delay_seconds,
         season=season,
@@ -162,6 +170,10 @@ def fetch_team_game_logs(season, delay_seconds=1):
             "wl": row.get("WL"),
             "pts": int(row["PTS"]) if row.get("PTS") is not None else None,
             "plus_minus": int(row["PLUS_MINUS"]) if row.get("PLUS_MINUS") is not None else None,
+            **{
+                col.lower(): int(row[col]) if row.get(col) is not None else None
+                for col in TEAM_BOX_SCORE_COLUMNS
+            },
         }
         for _, row in df.iterrows()
     ]
