@@ -86,3 +86,17 @@ def test_transform_team_game_logs_upserts_box_score_on_conflict():
     assert "team_id =" not in set_clause
     assert "nba_game_id =" not in set_clause
     mock_conn.commit.assert_called_once()
+
+
+def test_transform_team_game_logs_skips_unchanged_rows():
+    """Daily full-season re-fetches must not rewrite identical rows (#41)."""
+    from nba.plugins.transformers.team_game_logs import transform_team_game_logs
+    mock_conn, mock_cursor = _make_mock_conn()
+    transform_team_game_logs(mock_conn, [SAMPLE_LOG])
+    sql = " ".join(mock_cursor.execute.call_args[0][0].split())
+    where = sql.split("fetched_at = NOW() WHERE", 1)[1]
+    current, excluded = where.split("IS DISTINCT FROM")
+    for col in ["pts", "plus_minus", "wl", *BOX_SCORE]:
+        assert f"team_game_logs.{col}" in current
+        assert f"EXCLUDED.{col}" in excluded
+    assert "team_id" not in where.replace("team_game_logs.", "")

@@ -1,4 +1,5 @@
 # nba/dags/nba_stats_pipeline_dag.py
+import logging
 import os
 from datetime import timedelta
 
@@ -8,7 +9,7 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.sensors.external_task import ExternalTaskSensor
 
-from shared.plugins.db_client import get_data_db_conn, store_raw_response
+from shared.plugins.db_client import get_data_db_conn, prune_raw_responses, store_raw_response
 from nba.plugins.nba_api_client import (
     fetch_players,
     fetch_player_game_logs,
@@ -27,6 +28,9 @@ from nba.plugins.transformers.teams import transform_teams
 from nba.plugins.ml.settle import settle_recommendations as _settle_recommendations
 
 INGEST_DELAY_SECONDS = 1
+# Each daily fetch stores the full season-to-date, so raw nba_api responses
+# are pruned after this many days; normalized tables are the source of truth (#41).
+RAW_RETENTION_DAYS = 14
 SEASON_START_MONTH = 10  # NBA regular season tips off in October
 
 
@@ -219,6 +223,15 @@ def run_link_nba_game_ids():
         conn.close()
 
 
+def run_prune_raw_responses():
+    conn = get_data_db_conn()
+    try:
+        deleted = prune_raw_responses(conn, "nba_api/", RAW_RETENTION_DAYS)
+        logging.getLogger(__name__).info("Pruned %d raw nba_api responses", deleted)
+    finally:
+        conn.close()
+
+
 def run_settle_recommendations(**context):
     conn = get_data_db_conn()
     try:
@@ -272,6 +285,7 @@ with DAG(
     t_resolve          = PythonOperator(task_id="resolve_player_ids",         python_callable=run_resolve_player_ids)
     t_link_games       = PythonOperator(task_id="link_nba_game_ids",          python_callable=run_link_nba_game_ids)
     t_settle           = PythonOperator(task_id="settle_recommendations",    python_callable=run_settle_recommendations)
+    t_prune_raw        = PythonOperator(task_id="prune_raw_responses",       python_callable=run_prune_raw_responses)
 
     fetches = [t_fetch_teams, t_fetch_players, t_fetch_pgl, t_fetch_tgl, t_fetch_tss]
 
@@ -281,3 +295,5 @@ with DAG(
     t_xform_players >> [t_xform_pgl, t_xform_tgl, t_xform_tss]
     [t_xform_pgl, t_xform_tgl, t_xform_tss] >> t_resolve
     t_resolve >> t_link_games >> t_settle
+    # After the transforms have read today's raw responses; off the settle path
+    [t_xform_pgl, t_xform_tgl, t_xform_tss] >> t_prune_raw
