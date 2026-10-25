@@ -58,7 +58,7 @@ def test_run_backtest_never_trains_on_test_fold():
 
     df = _make_backtest_df()
     with patch.object(bt, "fit_recipe", side_effect=recording_fit):
-        preds = bt.run_backtest(df, fold_days=7, min_train_dates=14)
+        preds = bt.run_backtest(df, fold_days=7, min_train_dates=14, calibration_days=2)
 
     assert not preds.empty
     assert preds["model_prob"].between(0, 1).all()

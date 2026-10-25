@@ -25,7 +25,6 @@ import logging
 import numpy as np
 import pandas as pd
 import xgboost as xgb
-from sklearn.isotonic import IsotonicRegression
 from sklearn.metrics import roc_auc_score
 
 from nba.plugins.ml.score import TOP_N, _allocate_slots
@@ -35,6 +34,7 @@ from nba.plugins.ml.train import (
     VALIDATION_DAYS,
     XGB_PARAMS,
     _CalibratedModel,
+    _PlattCalibrator,
     load_training_data,
     prepare_features,
 )
@@ -118,7 +118,7 @@ def make_folds(dates, fold_days: int, min_train_dates: int) -> list[tuple[pd.Tim
 def fit_recipe(history: pd.DataFrame, calibration_days: int = VALIDATION_DAYS):
     """
     Fit the train_model recipe on history: XGBoost on all but the last
-    calibration_days, isotonic calibration on those days. Returns None when
+    calibration_days, Platt calibration on those days. Returns None when
     there isn't enough data to train.
     """
     cutoff = history["game_date"].max() - pd.Timedelta(days=calibration_days)
@@ -137,9 +137,8 @@ def fit_recipe(history: pd.DataFrame, calibration_days: int = VALIDATION_DAYS):
     classes, counts = np.unique(y_cal, return_counts=True)
     if len(classes) < 2 or counts.min() < 2:
         return model
-    iso = IsotonicRegression(y_min=0, y_max=1, out_of_bounds="clip")
-    iso.fit(model.predict_proba(X_cal)[:, 1], y_cal)
-    return _CalibratedModel(model, iso)
+    calibrator = _PlattCalibrator().fit(model.predict_proba(X_cal)[:, 1], y_cal)
+    return _CalibratedModel(model, calibrator)
 
 
 def run_backtest(

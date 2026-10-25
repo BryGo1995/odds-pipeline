@@ -15,7 +15,7 @@ import mlflow.sklearn
 import numpy as np
 import pandas as pd
 import xgboost as xgb
-from sklearn.isotonic import IsotonicRegression
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     accuracy_score,
     brier_score_loss,
@@ -58,7 +58,7 @@ XGB_PARAMS = {
     "random_state":     42,
 }
 MODEL_NAME = "nba_prop_model"
-VALIDATION_DAYS = 2
+VALIDATION_DAYS = 14  # Platt calibration window; 2 days let isotonic map scores to 1.0 (#33)
 FEATURES_DIR = os.environ.get("FEATURES_DIR", "/data/features")
 MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI", "http://mlflow:5000")
 
@@ -108,17 +108,43 @@ def prepare_features(df: pd.DataFrame, features: list[str] | None = None) -> tup
     return X, y, le
 
 
-class _CalibratedModel:
-    """Wraps an XGBoost model + isotonic calibrator into a single sklearn-compatible object."""
+class _PlattCalibrator:
+    """
+    Sigmoid (Platt) calibration: logistic regression on the logit of the raw
+    probability. Two parameters instead of an isotonic step function, so a
+    small calibration window can't map a score range to exactly 0 or 1.
+    """
 
-    def __init__(self, base_model, isotonic: IsotonicRegression):
+    def fit(self, raw, y):
+        self.lr = LogisticRegression(C=1e6).fit(_logit(raw), y)
+        return self
+
+    def predict(self, raw):
+        return self.lr.predict_proba(_logit(raw))[:, 1]
+
+
+def _logit(p) -> np.ndarray:
+    p = np.clip(np.asarray(p, dtype=float), 1e-6, 1 - 1e-6)
+    return np.log(p / (1 - p)).reshape(-1, 1)
+
+
+class _CalibratedModel:
+    """Wraps an XGBoost model + probability calibrator into a single sklearn-compatible object."""
+
+    def __init__(self, base_model, calibrator):
         self.base_model = base_model
-        self.isotonic = isotonic
+        self.calibrator = calibrator
         self.classes_ = base_model.classes_
+
+    def __setstate__(self, state):
+        # Models registered before #33 pickled an IsotonicRegression as `isotonic`
+        if "isotonic" in state:
+            state["calibrator"] = state.pop("isotonic")
+        self.__dict__.update(state)
 
     def predict_proba(self, X):
         raw = self.base_model.predict_proba(X)[:, 1]
-        calibrated = self.isotonic.predict(raw)
+        calibrated = self.calibrator.predict(raw)
         return np.column_stack([1 - calibrated, calibrated])
 
     def predict(self, X):
@@ -178,21 +204,20 @@ def train_model(features_dir: str = FEATURES_DIR, prop_type: str | None = None) 
     model.fit(X_train, y_train)
 
     # Calibrate probabilities — critical for reliable edge = model_prob - implied_prob
-    # Manual isotonic calibration to avoid sklearn 1.6 FrozenEstimator/__sklearn_tags__ bug
+    # Manual calibration to avoid sklearn 1.6 FrozenEstimator/__sklearn_tags__ bug
     val_has_both_classes = len(np.unique(y_val)) >= 2
     n_val = len(y_val)
     min_per_class = min(np.unique(y_val, return_counts=True)[1])
     can_calibrate = val_has_both_classes and min_per_class >= 2
     if can_calibrate:
         raw_prob = model.predict_proba(X_val)[:, 1]
-        iso = IsotonicRegression(y_min=0, y_max=1, out_of_bounds="clip")
-        iso.fit(raw_prob, y_val)
-        y_prob = iso.predict(raw_prob)
-        calibrated = _CalibratedModel(model, iso)
+        calibrator = _PlattCalibrator().fit(raw_prob, y_val)
+        y_prob = calibrator.predict(raw_prob)
+        calibrated = _CalibratedModel(model, calibrator)
     else:
         log.warning(
             "Validation set too small for calibration (n=%d, both_classes=%s) "
-            "— skipping isotonic calibration, using raw model probabilities.",
+            "— skipping calibration, using raw model probabilities.",
             n_val, val_has_both_classes,
         )
         y_prob = model.predict_proba(X_val)[:, 1]
