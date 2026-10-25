@@ -19,7 +19,7 @@ def test_dag_has_expected_tasks():
         "transform_teams", "transform_players",
         "transform_player_game_logs", "transform_team_game_logs", "transform_team_season_stats",
         "resolve_player_ids", "link_nba_game_ids",
-        "settle_recommendations",
+        "settle_recommendations", "prune_raw_responses",
     }
 
 
@@ -59,6 +59,11 @@ def test_dag_task_chain():
     assert "settle_recommendations" in [
         t.task_id for t in dag.get_task("link_nba_game_ids").downstream_list
     ]
+
+    # prune runs after the raw responses it could delete have been transformed
+    for task_id in ["transform_player_game_logs", "transform_team_game_logs", "transform_team_season_stats"]:
+        downstream = [t.task_id for t in dag.get_task(task_id).downstream_list]
+        assert "prune_raw_responses" in downstream, f"{task_id} must feed prune_raw_responses"
 
 
 def test_dag_has_slack_callbacks():

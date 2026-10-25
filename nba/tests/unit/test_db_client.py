@@ -62,3 +62,41 @@ def test_get_data_db_conn_uses_env_vars():
                 user="odds",
                 password="odds_password",
             )
+
+
+def _mock_conn(rowcount=0):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.rowcount = rowcount
+    mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    return mock_conn, mock_cursor
+
+
+def test_prune_raw_responses_scopes_to_prefix_and_age():
+    from shared.plugins.db_client import prune_raw_responses
+    mock_conn, mock_cursor = _mock_conn(rowcount=42)
+
+    deleted = prune_raw_responses(mock_conn, "nba_api/", 14)
+
+    assert deleted == 42
+    sql, params = mock_cursor.execute.call_args[0]
+    sql = " ".join(sql.split())
+    assert sql.startswith("DELETE FROM raw_api_responses")
+    assert "starts_with(endpoint, %(prefix)s)" in sql  # not LIKE: '_' is a wildcard
+    assert "make_interval(days => %(days)s)" in sql
+    assert params == {"prefix": "nba_api/", "days": 14}
+    mock_conn.commit.assert_called_once()
+
+
+def test_prune_raw_responses_keeps_newest_success_per_endpoint():
+    from shared.plugins.db_client import prune_raw_responses
+    mock_conn, mock_cursor = _mock_conn()
+
+    prune_raw_responses(mock_conn, "nba_api/", 14)
+
+    sql = " ".join(mock_cursor.execute.call_args[0][0].split())
+    keep = sql.split("NOT IN", 1)[1]
+    assert "DISTINCT ON (endpoint) id" in keep
+    assert "status = 'success'" in keep
+    assert "ORDER BY endpoint, fetched_at DESC" in keep
