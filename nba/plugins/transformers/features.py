@@ -24,6 +24,11 @@ PROP_STAT_MAP = {
 
 _PROP_TYPES = list(PROP_STAT_MAP.keys())
 
+# NBA game ID prefixes left out of rolling stats: 001 preseason (starters play
+# limited minutes) and 003 All-Star weekend. Regular season (002), play-in
+# (005), playoffs (004) and the NBA Cup final (006) count. See #19.
+ROLLING_EXCLUDED_GAME_TYPES = ["001", "003"]
+
 
 def build_features(conn, game_date: str) -> pd.DataFrame:
     """
@@ -197,6 +202,7 @@ def _compute_rolling_stats(conn, player_ids: list, before_date: str) -> pd.DataF
     """
     For each (player_id, prop_type), compute rolling averages of the corresponding
     stat column over the player's last 5/10/20 games prior to before_date.
+    Preseason and All-Star games are skipped (ROLLING_EXCLUDED_GAME_TYPES).
 
     Returns DataFrame with columns:
         player_id, prop_type, rolling_avg_5g, rolling_avg_10g, rolling_avg_20g, rolling_std_10g
@@ -214,9 +220,10 @@ def _compute_rolling_stats(conn, player_ids: list, before_date: str) -> pd.DataF
             SELECT player_id, game_date, pts, reb, ast, fg3m, fg3a
             FROM player_game_logs
             WHERE player_id = ANY(%s) AND game_date < %s
+              AND LEFT(nba_game_id, 3) <> ALL(%s)
             ORDER BY player_id, game_date ASC
             """,
-            (player_ids, before_date),
+            (player_ids, before_date, ROLLING_EXCLUDED_GAME_TYPES),
         )
         rows = cur.fetchall()
         col_names = [desc[0] for desc in cur.description]
