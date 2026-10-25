@@ -221,3 +221,41 @@ def test_load_training_data_ignores_mlb_feature_files(tmp_path):
     pq.write_table(pa.Table.from_pandas(_make_synthetic_df(5)), tmp_path / "mlb_props_features_2026-01-01.parquet")
 
     assert len(load_training_data(str(tmp_path))) == 10
+
+
+def test_platt_calibrator_never_outputs_certainty():
+    """A calibration window where every high score hit must not map to 1.0 (#33)."""
+    import numpy as np
+    from nba.plugins.ml.train import _PlattCalibrator
+
+    raw = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95])
+    y = np.array([0, 0, 1, 0, 1, 0, 1, 1, 1, 1])
+    cal = _PlattCalibrator().fit(raw, y)
+    p = cal.predict(np.array([0.0, 0.05, 0.5, 0.99, 1.0]))
+    assert ((p > 0) & (p < 1)).all()
+    assert np.all(np.diff(p) >= 0)
+
+
+class _IdentityBase:
+    """Picklable stand-in for an XGBoost model: raw probability = the single feature."""
+    classes_ = [0, 1]
+
+    def predict_proba(self, X):
+        import numpy as np
+        p = np.asarray(X, dtype=float).ravel()
+        return np.column_stack([1 - p, p])
+
+
+def test_calibrated_model_loads_legacy_isotonic_pickle():
+    """Models registered before #33 stored the calibrator as `isotonic`."""
+    import pickle
+    import numpy as np
+    from sklearn.isotonic import IsotonicRegression
+    from nba.plugins.ml.train import _CalibratedModel
+
+    iso = IsotonicRegression(out_of_bounds="clip").fit([0.1, 0.9], [0.2, 0.8])
+    legacy = _CalibratedModel.__new__(_CalibratedModel)
+    legacy.__dict__.update({"base_model": _IdentityBase(), "isotonic": iso, "classes_": _IdentityBase.classes_})
+
+    restored = pickle.loads(pickle.dumps(legacy))
+    np.testing.assert_allclose(restored.predict_proba([[0.1], [0.9]])[:, 1], [0.2, 0.8])
