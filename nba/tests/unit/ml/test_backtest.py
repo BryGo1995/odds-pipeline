@@ -235,3 +235,38 @@ def test_ablation_reports_deltas_against_full_set():
     full = result.iloc[0]
     assert full["d_log_loss"] == 0 and full["d_auc"] == 0
     np.testing.assert_allclose(result["d_log_loss"], result["log_loss_model"] - full["log_loss_model"])
+
+
+def test_settle_pays_the_side_picked():
+    from nba.plugins.ml.backtest import settle
+    picks = pd.DataFrame({
+        "outcome":           ["Under", "Under", "Over"],
+        "pick_implied":      [0.5, 0.5, 0.5],
+        "implied_prob_over": [0.55, 0.55, 0.5],
+        "actual_result":     [0, 1, 1],          # Over label: stat > line
+        "push":              [False] * 3,
+    })
+    result = settle(picks)
+    assert result["won"].tolist() == [True, False, True]
+    assert result["profit"].tolist() == [1.0, -1.0, 1.0]  # even money at 0.5 implied
+
+
+def test_replay_picks_takes_unders_and_over_only_mode_does_not():
+    from nba.plugins.ml.backtest import replay_picks
+    day = pd.DataFrame({
+        "game_date":          [pd.Timestamp("2026-04-01")] * 2,
+        "prop_type":          ["player_points"] * 2,
+        "model_prob":         [0.40, 0.56],
+        "implied_prob_over":  [0.55, 0.52],
+        "implied_prob_under": [0.48, 0.50],
+        "actual_result":      [0, 1],
+        "push":               [False] * 2,
+    })
+    both = replay_picks(day, top_n=1)
+    assert both["outcome"].tolist() == ["Under"]          # 0.60 - 0.48 beats 0.56 - 0.52
+    assert both["won"].tolist() == [True]
+    assert abs(both["profit"].iloc[0] - (1 / 0.48 - 1)) < 1e-9
+
+    over_only = replay_picks(day, top_n=1, unders=False)
+    assert over_only["outcome"].tolist() == ["Over"]
+    assert over_only["model_prob"].tolist() == [0.56]

@@ -39,6 +39,7 @@ def settle_recommendations(conn) -> None:
                 r.prop_type,
                 r.line,
                 r.game_date,
+                r.outcome,
                 pgl.pts,
                 pgl.reb,
                 pgl.ast,
@@ -76,11 +77,11 @@ def settle_recommendations(conn) -> None:
 
 
 def _settle_resolvable(conn, rows, newly_settled_dates: set) -> None:
-    # rows: id, player_name, prop_type, line, game_date, pts, reb, ast, fg3m, fg3a
-    stats_offset = 5  # first stat column index in the row tuple
+    # rows: id, player_name, prop_type, line, game_date, outcome, pts, reb, ast, fg3m, fg3a
+    stats_offset = 6  # first stat column index in the row tuple
 
     for row in rows:
-        rec_id, player_name, prop_type, line, game_date = row[:5]
+        rec_id, player_name, prop_type, line, game_date, outcome = row[:6]
         stat_col = PROP_STAT_MAP.get(prop_type)
         if not stat_col:
             log.warning("Unknown prop_type '%s' for rec id=%d — skipping", prop_type, rec_id)
@@ -90,7 +91,7 @@ def _settle_resolvable(conn, rows, newly_settled_dates: set) -> None:
         if stat_val is None:
             continue
 
-        actual_result = float(stat_val) > float(line)
+        actual_result = pick_won(outcome, stat_val, line)
         with conn.cursor() as cur:
             cur.execute(
                 """
@@ -101,6 +102,19 @@ def _settle_resolvable(conn, rows, newly_settled_dates: set) -> None:
                 (actual_result, stat_val, rec_id),
             )
         newly_settled_dates.add(game_date)
+
+
+def pick_won(outcome: str | None, stat_value, line) -> bool | None:
+    """
+    Whether the recommended side won: an Over wins above the line, an Under
+    below it. None for a push (stat exactly on a whole-number line).
+    """
+    stat_value, line = float(stat_value), float(line)
+    if stat_value == line:
+        return None
+    if outcome == "Under":
+        return stat_value < line
+    return stat_value > line
 
 
 def _mark_stale(conn, stale_ids: list, newly_settled_dates: set) -> None:
