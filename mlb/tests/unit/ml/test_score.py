@@ -66,7 +66,7 @@ def test_score_writes_recommendations_with_sport_mlb():
         assert call.args[1][-1] == "MLB"  # sport is the last bound parameter
 
 
-def test_score_skips_prop_types_whose_model_fails_to_load():
+def test_score_writes_other_prop_types_then_fails_when_a_model_fails_to_load():
     from mlb.plugins.ml.score import score
     df = _make_today_df()
 
@@ -85,8 +85,10 @@ def test_score_skips_prop_types_whose_model_fails_to_load():
         client = MagicMock()
         client.get_model_version_by_alias.return_value = MagicMock(version="1")
         mlflow_mock.tracking.MlflowClient.return_value = client
-        score(fake_conn, "2026-05-04")
+        with pytest.raises(RuntimeError, match="mlb_prop_model_batter_total_bases@production"):
+            score(fake_conn, "2026-05-04")
 
+    fake_conn.commit.assert_called_once()  # picks that did score are written before failing
     insert_calls = [c for c in fake_cur.execute.call_args_list if "INSERT INTO recommendations" in c.args[0]]
     # Only batter_hits succeeded (batter_total_bases raised), so all picks are
     # batter_hits — with only one surviving prop type there is no split to perform.
