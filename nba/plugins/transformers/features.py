@@ -3,7 +3,7 @@
 Feature engineering for the NBA player prop ML model.
 
 build_features(conn, game_date) queries player_props and player_game_logs,
-computes rolling stats and implied probability, and returns a DataFrame
+computes rolling stats and implied probabilities for both sides, and returns a DataFrame
 ready to write as Parquet.
 """
 import glob
@@ -84,8 +84,22 @@ def build_features(conn, game_date: str) -> pd.DataFrame:
             CASE
                 WHEN t.full_name = pw.home_team THEN TRUE
                 WHEN t.full_name = pw.away_team THEN FALSE
-            END                                AS is_home
+            END                                AS is_home,
+            u.price                            AS under_price
         FROM prop_windows pw
+        -- The Under quoted at the same book and line, latest snapshot (#45)
+        LEFT JOIN LATERAL (
+            SELECT up.price
+            FROM player_props up
+            WHERE up.nba_player_id = pw.player_id
+              AND up.game_id       = pw.game_id
+              AND up.bookmaker     = pw.bookmaker
+              AND up.prop_type     = pw.prop_type
+              AND up.outcome       = 'Under'
+              AND up.point         = pw.line
+            ORDER BY up.last_update DESC
+            LIMIT 1
+        ) u ON TRUE
         LEFT JOIN player_game_logs pgl
                ON pgl.player_id = pw.player_id
               AND pgl.game_date  = pw.game_date
@@ -104,6 +118,11 @@ def build_features(conn, game_date: str) -> pd.DataFrame:
     df = pd.DataFrame(rows, columns=col_names)
 
     df["implied_prob_over"] = df["price"].apply(american_odds_to_implied_prob)
+    df["implied_prob_under"] = df["under_price"].apply(
+        lambda p: american_odds_to_implied_prob(p) if pd.notna(p) else None
+    ).astype(float)
+    # Over probability with the vig removed; NaN when the book posted no Under
+    df["fair_prob_over"] = df["implied_prob_over"] / (df["implied_prob_over"] + df["implied_prob_under"])
     df = attach_labels(conn, df)
 
     player_ids = df["player_id"].dropna().unique().tolist()
@@ -113,12 +132,12 @@ def build_features(conn, game_date: str) -> pd.DataFrame:
     df = df.merge(rolling_df, on=["player_id", "prop_type"], how="left")
     df = df.merge(rest_df,    on="player_id",                how="left")
 
-    drop_cols = ["price", "home_team", "away_team", "game_id"]
+    drop_cols = ["price", "under_price", "home_team", "away_team", "game_id"]
     df = df.drop(columns=[c for c in drop_cols if c in df.columns])
 
     cols = [
         "player_id", "player_name", "game_date", "prop_type", "bookmaker",
-        "line", "implied_prob_over", "line_movement",
+        "line", "implied_prob_over", "implied_prob_under", "fair_prob_over", "line_movement",
         "rolling_avg_5g", "rolling_avg_10g", "rolling_avg_20g", "rolling_std_10g",
         "is_home", "rest_days",
         "actual_result", "actual_stat_value",

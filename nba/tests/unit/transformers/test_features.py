@@ -136,3 +136,27 @@ def test_compute_rolling_stats_excludes_preseason_and_all_star_games():
     assert "LEFT(nba_game_id, 3) <> ALL(%s)" in sql
     assert params[-1] == ROLLING_EXCLUDED_GAME_TYPES
     assert sorted(ROLLING_EXCLUDED_GAME_TYPES) == ["001", "003"]
+
+
+def test_build_features_adds_under_price_and_fair_prob():
+    import datetime
+    from unittest.mock import patch
+    from nba.plugins.transformers.features import build_features
+    cols = ["player_id", "player_name", "game_date", "prop_type", "bookmaker", "line",
+            "price", "line_movement", "is_home", "under_price"]
+    rows = [
+        (1, "A", datetime.date(2026, 10, 24), "player_points", "fanduel", 24.5, -110, 0.0, True, -110),
+        (1, "A", datetime.date(2026, 10, 24), "player_points", "betmgm",  24.5, -120, 0.0, True, None),
+    ]
+    mock_conn, _ = _make_mock_conn(rows, cols)
+    with patch("nba.plugins.transformers.features.attach_labels", side_effect=lambda conn, df: df), \
+         patch("nba.plugins.transformers.features._compute_rolling_stats",
+               return_value=pd.DataFrame(columns=["player_id", "prop_type"])), \
+         patch("nba.plugins.transformers.features._compute_rest_days",
+               return_value=pd.DataFrame(columns=["player_id"])):
+        result = build_features(mock_conn, "2026-10-24")
+    assert "under_price" not in result.columns
+    assert abs(result["implied_prob_under"].iloc[0] - 110 / 210) < 1e-9
+    assert abs(result["fair_prob_over"].iloc[0] - 0.5) < 1e-9
+    assert pd.isna(result["implied_prob_under"].iloc[1])
+    assert pd.isna(result["fair_prob_over"].iloc[1])

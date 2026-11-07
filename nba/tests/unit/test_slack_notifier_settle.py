@@ -72,3 +72,20 @@ def test_notify_picks_settled_shows_unresolvable_as_unknown():
     text = mock_post.call_args.args[0]
     assert "DNP Player" in text
     assert "—" in text  # unresolvable shown with dash
+
+
+def test_notify_picks_settled_shows_side_and_push():
+    from shared.plugins.slack_notifier import notify_picks_settled
+    results = [
+        {"player_name": "Under Player", "prop_type": "player_assists", "line": 6.5,
+         "outcome": "Under", "actual_result": True, "actual_stat_value": 4.0, "edge": 0.03},
+        {"player_name": "Push Player", "prop_type": "player_points", "line": 22.0,
+         "outcome": "Over", "actual_result": None, "actual_stat_value": 22.0, "edge": 0.02},
+    ]
+    with patch("shared.plugins.slack_notifier._WEBHOOK_URL", "https://hooks.slack.com/test"), \
+         patch("shared.plugins.slack_notifier._post") as mock_post:
+        notify_picks_settled(_GAME_DATE, results, sport="nba")
+    text = mock_post.call_args.args[0]
+    assert "U 6.5" in text
+    assert "➖ Push Player" in text and "Scored: 22" in text
+    assert "1/1 hit" in text  # the push is not counted as a decided pick
