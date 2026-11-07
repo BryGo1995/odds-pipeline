@@ -262,7 +262,7 @@ def test_replay_picks_takes_unders_and_over_only_mode_does_not():
         "actual_result":      [0, 1],
         "push":               [False] * 2,
     })
-    both = replay_picks(day, top_n=1)
+    both = replay_picks(day, top_n=1, unders=True)
     assert both["outcome"].tolist() == ["Under"]          # 0.60 - 0.48 beats 0.56 - 0.52
     assert both["won"].tolist() == [True]
     assert abs(both["profit"].iloc[0] - (1 / 0.48 - 1)) < 1e-9

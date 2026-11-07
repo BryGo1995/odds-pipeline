@@ -8,9 +8,10 @@ fold. Nothing a fold is scored on was seen during fitting, including the
 medians used to fill missing values.
 
 Predictions are compared against the de-vigged market probability and run
-through the production pick rule (better side of each prop by edge, top-N
-slots allocated per prop type), settled at the posted price of the side
-picked. The replay is also run Over-only for comparison (#45).
+through the pick rule (top-N by edge, slots allocated per prop type),
+settled at the posted price of the side picked. The replay is run both ways:
+better side of each prop, and Over only. Production uses whichever
+score.RECOMMEND_UNDERS selects (#45).
 
 Feature rows are duplicated per bookmaker/line, so every metric weights rows
 so that each (player, game_date, prop_type) counts once.
@@ -34,7 +35,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score
 
-from nba.plugins.ml.score import TOP_N, _allocate_slots, choose_side
+from nba.plugins.ml.score import RECOMMEND_UNDERS, TOP_N, _allocate_slots, choose_side
 from nba.plugins.ml.train import (
     FEATURES_DIR,
     PER_PROP_FEATURES,
@@ -347,15 +348,15 @@ def settle(picks: pd.DataFrame) -> pd.DataFrame:
     return picks
 
 
-def replay_picks(preds: pd.DataFrame, top_n: int = TOP_N, unders: bool = True) -> pd.DataFrame:
+def replay_picks(preds: pd.DataFrame, top_n: int = TOP_N, unders: bool = RECOMMEND_UNDERS) -> pd.DataFrame:
     """
     Apply score()'s pick rule to each game date: choose_side picks the better
-    side of each prop (Over only when unders=False), then top-N slots are
-    allocated across prop types by _allocate_slots. Returns the settled picks.
+    side of each prop (Over only when unders=False; defaults to production's
+    setting), then top-N slots are allocated across prop types by
+    _allocate_slots. Returns the settled picks.
     """
-    sided = preds if unders else preds.drop(columns="implied_prob_under", errors="ignore")
     picks = []
-    for _, day in choose_side(sided).groupby("game_date"):
+    for _, day in choose_side(preds, unders=unders).groupby("game_date"):
         ranked = {pt: g.sort_values("edge", ascending=False) for pt, g in day.groupby("prop_type")}
         top_edges = {pt: float(g["edge"].iloc[0]) for pt, g in ranked.items()}
         allocation = _allocate_slots(sorted(ranked), top_edges, top_n)
@@ -419,8 +420,9 @@ def main(argv=None):
         print("No folds to evaluate — not enough labeled dates.")
         return
 
-    picks = replay_picks(preds)
+    picks = replay_picks(preds, unders=True)
     over_only = replay_picks(preds, unders=False)
+    production = "both sides" if RECOMMEND_UNDERS else "Over only"
     pd.set_option("display.width", 200)
     pd.set_option("display.max_columns", 30)
     pd.set_option("display.float_format", "{:.4f}".format)
@@ -435,15 +437,17 @@ def main(argv=None):
     print("Probability quality vs de-vigged market (log_loss_delta < 0 = model beats market)")
     print(pd.concat([probability_metrics(preds, by=None), probability_metrics(preds)], ignore_index=True)
           .to_string(index=False), "\n")
+    print(f"Production rule: {production} (score.RECOMMEND_UNDERS)\n")
     print(f"Top-{TOP_N} pick replay, better side of each prop (1 unit per pick at the posted price)")
     print(pd.concat([betting_summary(picks), betting_summary(picks, by="outcome"),
                      betting_summary(picks, by="prop_type")], ignore_index=True)
           .to_string(index=False), "\n")
-    print(f"Top-{TOP_N} pick replay, Over only (the pre-#45 rule)")
+    print(f"Top-{TOP_N} pick replay, Over only")
     print(pd.concat([betting_summary(over_only), betting_summary(over_only, by="prop_type")], ignore_index=True)
           .to_string(index=False), "\n")
-    print("Top-10 picks by fold")
-    print(betting_summary(picks.assign(fold=picks["fold_start"].dt.date), by="fold").to_string(index=False))
+    prod_picks = picks if RECOMMEND_UNDERS else over_only
+    print(f"Top-{TOP_N} picks by fold ({production})")
+    print(betting_summary(prod_picks.assign(fold=prod_picks["fold_start"].dt.date), by="fold").to_string(index=False))
 
     fold_args = (args.fold_days, args.min_train_dates, features)
     if args.importance:

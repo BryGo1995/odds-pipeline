@@ -274,7 +274,8 @@ def test_choose_side_without_under_column_is_over_only():
     assert choose_side(df)["outcome"].tolist() == ["Over"]
 
 
-def test_score_writes_under_picks_with_their_own_price():
+def _score_one_under_favoured_row_per_type(recommend_unders):
+    """Score props where the Under has the better edge; return the INSERT rows."""
     from nba.plugins.ml.score import score
 
     mock_conn, mock_cursor = _setup_mock_conn()
@@ -282,6 +283,7 @@ def test_score_writes_under_picks_with_their_own_price():
     feature_df["implied_prob_over"] = 0.55
     feature_df["implied_prob_under"] = 0.48
     with patch("nba.plugins.ml.score.load_todays_features", return_value=feature_df), \
+         patch("nba.plugins.ml.score.RECOMMEND_UNDERS", recommend_unders), \
          patch("nba.plugins.ml.score.mlflow") as mock_mlflow:
         mock_mlflow.sklearn.load_model.return_value = _mock_model(1, prob=0.45)
         mock_client = MagicMock()
@@ -290,8 +292,12 @@ def test_score_writes_under_picks_with_their_own_price():
 
         score(mock_conn, "2026-03-26")
 
-    rows = [c.args[1] for c in mock_cursor.execute.call_args_list
+    return [c.args[1] for c in mock_cursor.execute.call_args_list
             if c.args and "INSERT" in str(c.args[0])]
+
+
+def test_score_writes_under_picks_with_their_own_price():
+    rows = _score_one_under_favoured_row_per_type(recommend_unders=True)
     assert len(rows) == 3
     for row in rows:
         # (player_name, prop_type, bookmaker, line, outcome, model_prob, implied_prob, edge, ...)
@@ -299,3 +305,21 @@ def test_score_writes_under_picks_with_their_own_price():
         assert abs(row[5] - 0.55) < 1e-9   # 1 - P(Over)
         assert abs(row[6] - 0.48) < 1e-9   # Under's implied probability
         assert abs(row[7] - 0.07) < 1e-9
+
+
+def test_score_is_over_only_by_default():
+    from nba.plugins.ml.score import RECOMMEND_UNDERS
+    assert RECOMMEND_UNDERS is False
+    rows = _score_one_under_favoured_row_per_type(recommend_unders=RECOMMEND_UNDERS)
+    assert len(rows) == 3
+    for row in rows:
+        assert row[4] == "Over"
+        assert abs(row[5] - 0.45) < 1e-9   # P(Over)
+        assert abs(row[6] - 0.55) < 1e-9   # Over's implied probability
+        assert abs(row[7] + 0.10) < 1e-9
+
+
+def test_choose_side_over_only_ignores_under_price():
+    from nba.plugins.ml.score import choose_side
+    df = pd.DataFrame({"model_prob": [0.3], "implied_prob_over": [0.5], "implied_prob_under": [0.45]})
+    assert choose_side(df, unders=False)["outcome"].tolist() == ["Over"]

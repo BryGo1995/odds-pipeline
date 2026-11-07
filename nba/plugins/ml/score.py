@@ -3,8 +3,8 @@ Scoring module for NBA player prop ML model.
 
 score(conn, game_date) loads per-prop-type production models from the MLflow
 registry, scores today's feature Parquet file, picks the better side (Over or
-Under) of each prop, allocates top-10 slots evenly across prop types, and
-writes ranked recommendations to Postgres.
+Under, while RECOMMEND_UNDERS is on) of each prop, allocates top-10 slots
+evenly across prop types, and writes ranked recommendations to Postgres.
 """
 import logging
 import os
@@ -22,6 +22,12 @@ log = logging.getLogger(__name__)
 
 TOP_N = 10
 
+# Production recommends Overs only until a feature makes the model's edge rank
+# props within a side. The #45 backtest found Unders as a group near breakeven
+# but no link between Under edge and profit, so Under picks would show positive
+# edges that aren't real. Flip once a feature clears that bar (#37, #39).
+RECOMMEND_UNDERS = False
+
 
 def load_todays_features(game_date: str, features_dir: str = FEATURES_DIR) -> pd.DataFrame:
     """Load the Parquet feature file for game_date via DuckDB."""
@@ -36,7 +42,7 @@ def load_todays_features(game_date: str, features_dir: str = FEATURES_DIR) -> pd
         conn.close()
 
 
-def choose_side(df: pd.DataFrame) -> pd.DataFrame:
+def choose_side(df: pd.DataFrame, unders: bool = True) -> pd.DataFrame:
     """
     Price both sides of each prop from the model's Over probability in
     df["model_prob"] and keep the side with the larger edge (#45). P(Under) is
@@ -45,11 +51,12 @@ def choose_side(df: pd.DataFrame) -> pd.DataFrame:
 
     Adds outcome ('Over'/'Under'), pick_prob and pick_implied (the chosen
     side's model and implied probabilities) and edge = pick_prob - pick_implied.
+    With unders=False every prop is priced as an Over.
     """
     df = df.copy()
     p_over = df["model_prob"].astype(float)
     implied_over = df["implied_prob_over"].astype(float)
-    implied_under = (df["implied_prob_under"].astype(float) if "implied_prob_under" in df
+    implied_under = (df["implied_prob_under"].astype(float) if unders and "implied_prob_under" in df
                      else pd.Series(np.nan, index=df.index))
     take_under = ((1 - p_over) - implied_under) > (p_over - implied_over)  # NaN Under -> False
     df["outcome"] = np.where(take_under, "Under", "Over")
@@ -120,7 +127,7 @@ def score(conn, game_date: str, features_dir: str = FEATURES_DIR) -> None:
 
         X, _, _ = prepare_features(subset, features=PER_PROP_FEATURES)
         subset["model_prob"] = model.predict_proba(X)[:, 1]
-        subset = choose_side(subset)
+        subset = choose_side(subset, unders=RECOMMEND_UNDERS)
         subset["model_prob"] = subset["pick_prob"]
         subset["implied_prob"] = subset["pick_implied"]
         subset["model_version"] = model_version
