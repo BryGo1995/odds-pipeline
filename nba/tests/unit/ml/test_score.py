@@ -323,3 +323,48 @@ def test_choose_side_over_only_ignores_under_price():
     from nba.plugins.ml.score import choose_side
     df = pd.DataFrame({"model_prob": [0.3], "implied_prob_over": [0.5], "implied_prob_under": [0.45]})
     assert choose_side(df, unders=False)["outcome"].tolist() == ["Over"]
+
+
+def _score_with_models(feature_df, fake_load):
+    from nba.plugins.ml.score import score
+    mock_conn, mock_cursor = _setup_mock_conn()
+    with patch("nba.plugins.ml.score.load_todays_features", return_value=feature_df), \
+         patch("nba.plugins.ml.score.mlflow") as mock_mlflow:
+        mock_mlflow.sklearn.load_model.side_effect = fake_load
+        mock_client = MagicMock()
+        mock_client.get_model_version_by_alias.return_value.version = "1"
+        mock_mlflow.tracking.MlflowClient.return_value = mock_client
+        score(mock_conn, "2026-03-26")
+    return mock_conn, mock_cursor, mock_mlflow
+
+
+def test_score_writes_other_prop_types_then_fails_when_a_model_is_missing():
+    import pytest
+    from nba.plugins.ml.score import score
+    mock_conn, mock_cursor = _setup_mock_conn()
+
+    def fake_load(uri):
+        if "player_assists" in uri:
+            raise RuntimeError("Registered model alias production not found.")
+        return _mock_model(5)
+
+    with patch("nba.plugins.ml.score.load_todays_features", return_value=_make_feature_df()), \
+         patch("nba.plugins.ml.score.mlflow") as mock_mlflow:
+        mock_mlflow.sklearn.load_model.side_effect = fake_load
+        mock_mlflow.tracking.MlflowClient.return_value.get_model_version_by_alias.return_value.version = "1"
+        with pytest.raises(RuntimeError, match=r"1 prop type\(s\).*nba_prop_model_player_assists@production"):
+            score(mock_conn, "2026-03-26")
+
+    mock_conn.commit.assert_called_once()  # the picks that did score are written first
+    inserted = {c.args[1][1] for c in mock_cursor.execute.call_args_list
+                if c.args and "INSERT" in str(c.args[0])}
+    assert inserted == {"player_points", "player_rebounds"}
+
+
+def test_score_prop_type_without_rows_today_is_not_an_error():
+    df = _make_feature_df()
+    df = df[df["prop_type"] != "player_assists"]
+    conn, cursor, mock_mlflow = _score_with_models(df, lambda uri: _mock_model(5))
+    conn.commit.assert_called_once()
+    uris = [c.args[0] for c in mock_mlflow.sklearn.load_model.call_args_list]
+    assert not any("player_assists" in u for u in uris)  # never even looked up

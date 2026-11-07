@@ -73,6 +73,7 @@ def score(conn, game_date: str, features_dir: str = FEATURES_DIR) -> None:
 
     scored_subsets = []
     active_prop_types = []
+    unloaded = []  # model URIs for prop types that had rows but no loadable model
 
     for prop_type in sorted(MLB_PROP_STAT_MAP.keys()):
         subset = df[df["prop_type"] == prop_type].copy()
@@ -84,7 +85,8 @@ def score(conn, game_date: str, features_dir: str = FEATURES_DIR) -> None:
         try:
             model = mlflow.sklearn.load_model(model_uri)
         except Exception as exc:
-            log.warning("Could not load model %s: %s — skipping %s", model_uri, exc, prop_type)
+            log.error("Could not load model %s: %s — skipping %s", model_uri, exc, prop_type)
+            unloaded.append(model_uri)
             continue
 
         try:
@@ -106,7 +108,8 @@ def score(conn, game_date: str, features_dir: str = FEATURES_DIR) -> None:
         active_prop_types.append(prop_type)
 
     if not scored_subsets:
-        raise ValueError(f"No prop types could be scored for {game_date}")
+        raise ValueError(f"No prop types could be scored for {game_date}; "
+                         f"no loadable model: {', '.join(unloaded) or 'none'}")
 
     top_edges = {
         subset["prop_type"].iloc[0]: float(subset["edge"].iloc[0])
@@ -158,3 +161,11 @@ def score(conn, game_date: str, features_dir: str = FEATURES_DIR) -> None:
                 ),
             )
     conn.commit()
+
+    # Fail the task after the picks that did score are written, so a missing
+    # production alias can't silently drop a prop type (#47).
+    if unloaded:
+        raise RuntimeError(
+            f"Scored {game_date} without {len(unloaded)} prop type(s) that had features: "
+            f"no loadable model for {', '.join(unloaded)}"
+        )
