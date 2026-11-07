@@ -427,3 +427,48 @@ def test_notify_picks_settled_uses_mlb_prefix_and_labels():
     assert "Home Runs" in text
     assert "Hits" in text
     assert "Aaron Judge" in text
+
+
+# --- notify_missed_recommendations ---
+
+def _post_missed(missed, last_rec_date, paused=(), runs=None):
+    from shared.plugins.slack_notifier import notify_missed_recommendations
+    runs = runs or {}
+    with patch("shared.plugins.slack_notifier._WEBHOOK_URL", "https://hooks.slack.com/test"), \
+         patch("shared.plugins.slack_notifier._get_dag_run",
+               side_effect=lambda dag_id, *a: runs.get(dag_id)), \
+         patch("shared.plugins.slack_notifier._is_dag_paused",
+               side_effect=lambda dag_id: dag_id in paused), \
+         patch("shared.plugins.slack_notifier._post") as mock_post:
+        notify_missed_recommendations(make_context(), missed, last_rec_date)
+    return mock_post.call_args.args[0]
+
+
+def test_notify_missed_single_day_does_not_page_channel():
+    from datetime import date
+    text = _post_missed([date(2026, 11, 6)], date(2026, 11, 5))
+    assert "<!channel>" not in text
+    assert "[NBA] 🚨 No recommendations for game day" in text
+    assert "Last picks: Thu Nov 5" in text
+
+
+def test_notify_missed_streak_pages_channel_and_shows_dag_states():
+    from datetime import date
+    failed = MagicMock(state="failed")
+    ok = MagicMock(state="success")
+    text = _post_missed(
+        [date(2026, 11, 6), date(2026, 11, 5)], date(2026, 10, 27),
+        paused={"nba_stats_pipeline"},
+        runs={"nba_odds_pipeline": ok, "nba_feature_dag": failed},
+    )
+    assert text.startswith("<!channel> [NBA]")
+    assert "2 straight game days" in text
+    assert "✅ nba_odds_pipeline — success" in text
+    assert "⚠️ nba_stats_pipeline — no run today (paused)" in text
+    assert "❌ nba_feature_dag — failed" in text
+
+
+def test_notify_missed_handles_no_previous_picks():
+    from datetime import date
+    text = _post_missed([date(2026, 11, 6)], None)
+    assert "Last picks: none found" in text

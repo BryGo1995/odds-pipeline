@@ -145,6 +145,40 @@ def notify_score_ready(context):
     _post(text)
 
 
+def notify_missed_recommendations(context, missed, last_rec_date):
+    """Posts an escalating alert when game days go by with no recommendations (#51)."""
+    if not _WEBHOOK_URL:
+        logger.warning("Slack notification skipped: SLACK_WEBHOOK_URL not set")
+        return
+
+    sport = _resolve_sport(context)
+    prefix = _SPORT_DISPLAY[sport]["prefix"]
+
+    # From the second missed day on, page the channel — one-off failure
+    # alerts were easy to miss.
+    mention = "<!channel> " if len(missed) >= 2 else ""
+    days = "game day" if len(missed) == 1 else f"{len(missed)} straight game days"
+    last = last_rec_date.strftime("%a %b %-d") if last_rec_date else "none found"
+
+    day_start = pendulum.instance(context["execution_date"]).start_of("day")
+    day_end = day_start.add(days=1)
+    lines = []
+    for dag_id in _DAILY_PIPELINE_DAGS_BY_SPORT[sport]:
+        paused = " (paused)" if _is_dag_paused(dag_id) else ""
+        run = _get_dag_run(dag_id, day_start, day_end)
+        if run is None:
+            lines.append(f"⚠️ {dag_id} — no run today{paused}")
+        else:
+            state_emoji = "✅" if run.state == "success" else "❌"
+            lines.append(f"{state_emoji} {dag_id} — {run.state}{paused}")
+
+    text = (
+        f"{mention}{prefix} 🚨 No recommendations for {days} | "
+        f"Last picks: {last}\n\n" + "\n".join(lines)
+    )
+    _post(text)
+
+
 def notify_model_ready(context):
     """on_success_callback for {sport}_train_dag. Posts per-prop-type model metrics."""
     if not _WEBHOOK_URL:
@@ -268,6 +302,18 @@ def _get_dag_run(dag_id, day_start, day_end):
     except Exception as exc:
         logger.warning("Failed to query DagRun for %s: %s", dag_id, exc)
         return None
+
+
+def _is_dag_paused(dag_id):
+    try:
+        from airflow.models import DagModel
+        from airflow.utils.session import create_session
+        with create_session() as session:
+            dag = session.query(DagModel).filter(DagModel.dag_id == dag_id).first()
+            return bool(dag and dag.is_paused)
+    except Exception as exc:
+        logger.warning("Failed to query DagModel for %s: %s", dag_id, exc)
+        return False
 
 
 def _post(text):
